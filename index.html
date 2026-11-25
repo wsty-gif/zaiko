@@ -146,6 +146,7 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
 .c-name{grid-area:name;font-size:19px;font-weight:600;line-height:1.35;overflow-wrap:anywhere}
 .c-qty{grid-area:qty;font-size:24px;font-weight:700;text-align:right;white-space:nowrap;line-height:1.2}
 .c-qty .dash{color:var(--line-strong);font-weight:400}
+.c-qty .prev{font-size:16px;font-weight:600;color:var(--text-3)}
 .c-sub{grid-area:sub;font-size:14px;color:var(--text-2);line-height:1.45;overflow-wrap:anywhere}
 .c-st{grid-area:st;font-size:14px;font-weight:600;text-align:right;white-space:nowrap;color:var(--text-3)}
 .c-need{grid-area:need;justify-self:start;margin-top:4px;padding:4px 12px;border-radius:8px;font-size:15px;font-weight:700;color:var(--warn);background:var(--surface);border:1.5px solid var(--warn-line)}
@@ -179,6 +180,7 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
 .rp > div:empty{display:none}
 .warn-box{display:grid;gap:12px;padding:16px 20px;border:1.5px solid var(--warn-line);background:var(--warn-bg);border-radius:16px;line-height:1.7}
 .warn-box .names{font-size:15px;color:var(--text-2)}
+.warn-box.mis-box{border-color:var(--unit-line);background:var(--unit-bg)}
 .warn-box .btn{justify-self:start}
 .note{font-size:15px;color:var(--text-2);line-height:1.7}
 .rp-text{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 24px;white-space:pre-wrap;font-size:17px;line-height:1.75;-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;overflow-wrap:anywhere;box-shadow:var(--shadow)}
@@ -232,6 +234,7 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
 .val.fresh .v{background:var(--fresh)}
 .val .u{font-size:22px;font-weight:600;color:var(--text-2);white-space:nowrap}
 .val .ph{font-size:20px;color:var(--text-3)}
+.val .carry{padding:4px 8px;border-radius:8px;background:var(--surface-2);color:var(--text-2);font-size:13px;font-weight:600;line-height:1.3;text-align:center}
 .units{display:flex;flex-wrap:wrap;gap:8px}
 .unit{min-width:76px;min-height:56px;padding:0 16px;border-radius:12px;border:1.5px solid var(--line-strong);background:var(--surface);font-size:20px;font-weight:600}
 .unit:active{background:var(--surface-2)}
@@ -373,14 +376,14 @@ button.set-main:active{opacity:.6}
     <div class="rp-text" id="rp-text"></div>
     <div class="rp-end">
       <h2>LINEへの送信が済んだら</h2>
-      <p class="note">入力した数量と現金の内容を消去して、次回の在庫確認に備えます。商品や保管場所などの設定は残ります。</p>
+      <p class="note">今回の在庫確認を締めます。入力した数量は、次回の入力画面に「前回」の数量として表示されるので、変わったところだけ直せば済みます。</p>
       <p class="copied" id="rp-copied" hidden></p>
-      <button class="btn danger-outline" data-act="end">今回の在庫確認を終了する</button>
+      <button class="btn secondary" data-act="end">今回の在庫確認を終了する</button>
     </div>
   </div>
   <div class="action-bar">
     <button class="btn secondary" data-act="copy-buy"><svg class="i"><use href="#i-copy"/></svg>購入必要品のみコピー</button>
-    <button class="btn primary grow" data-act="copy-all"><svg class="i"><use href="#i-copy"/></svg>報告全文をコピー</button>
+    <button class="btn primary grow" data-act="copy-all"><svg class="i"><use href="#i-copy"/></svg>報告をコピー</button>
   </div>
 </div>
 
@@ -411,6 +414,7 @@ var APP_ID = 'sweets-zaiko';
 var K_MASTER = 'sweetsZaiko.master.v1';
 var K_SESSION = 'sweetsZaiko.session.v1';
 var K_UI = 'sweetsZaiko.ui.v1';
+var K_PREV = 'sweetsZaiko.prev.v1';
 var CATS = ['food', 'supply', 'cash'];
 var CAT_LABEL = { food: '食材', supply: '備品', cash: '金庫' };
 
@@ -479,14 +483,19 @@ function normSession(s) {
   return { date: s.date, startedAt: s.startedAt || null, entries: s.entries, copiedAt: s.copiedAt || null, ack: s.ack || null };
 }
 
+/* 前回の数量（次の在庫確認の入力画面に最初から表示する値）。履歴は持たず、項目・保管場所ごとの最新値だけを持つ */
+function normPrev(p) { return { entries: p && p.entries && typeof p.entries === 'object' ? p.entries : {} }; }
+
 var M = normMaster(lsGet(K_MASTER)) || defaultMaster();
 var S = normSession(lsGet(K_SESSION));
+var P = normPrev(lsGet(K_PREV));
 var UI = Object.assign({ filter: 'all', view: 'list', setTab: 'items' }, lsGet(K_UI) || {});
 var screen = null, prevScreen = 'start', mainScrollY = 0, inp = null, reorder = false;
 var layers = [];
 
 function saveMaster() { lsSet(K_MASTER, M); }
 function saveSession() { if (S) lsSet(K_SESSION, S); }
+function savePrev() { lsSet(K_PREV, P); }
 function saveUI() { lsSet(K_UI, { filter: UI.filter, view: UI.view, setTab: UI.setTab }); }
 
 /* ================= 小道具 ================= */
@@ -519,16 +528,34 @@ function keysOf(it) {
 function getE(id, k) { return (S && S.entries[id] && S.entries[id][k]) || null; }
 function setE(id, k, e) { if (!S.entries[id]) S.entries[id] = {}; S.entries[id][k] = e; saveSession(); }
 function delE(id, k) { if (S.entries[id]) delete S.entries[id][k]; saveSession(); }
-/* 保管場所の設定を変えたとき、入力済みの数量が宙に浮かないよう、空いている場所へ移す */
-function migrateEntries(it) {
-  if (!S || !S.entries[it.id]) return;
-  var o = S.entries[it.id], nk = keysOf(it), moved = false;
+function getP(id, k) { return (P.entries[id] && P.entries[id][k]) || null; }
+/* 終わった在庫確認の数量を「前回の数量」に移す。入力しなかった項目は、それより前の値を残す */
+function rollIntoPrev(s) {
+  if (!s) return;
+  Object.keys(s.entries).forEach(function (id) {
+    var o = s.entries[id]; if (!o) return;
+    Object.keys(o).forEach(function (k) {
+      var e = o[k]; if (!e) return;
+      if (!P.entries[id]) P.entries[id] = {};
+      P.entries[id][k] = { q: e.q, u: e.u || null, d: s.date };
+    });
+  });
+  savePrev();
+}
+/* 保管場所の設定を変えたとき、入力済みの数量・前回の数量が宙に浮かないよう、空いている場所へ移す */
+function migrateMap(map, it) {
+  var o = map[it.id]; if (!o) return false;
+  var nk = keysOf(it), moved = false;
   Object.keys(o).forEach(function (k) {
     if (nk.indexOf(k) >= 0 || !o[k]) return;
     var free = nk.filter(function (x) { return !o[x]; })[0];
     if (free) { o[free] = o[k]; delete o[k]; moved = true; }
   });
-  if (moved) saveSession();
+  return moved;
+}
+function migrateEntries(it) {
+  if (S && migrateMap(S.entries, it)) saveSession();
+  if (migrateMap(P.entries, it)) savePrev();
 }
 function hasEntries(s) {
   if (!s) return false;
@@ -578,6 +605,18 @@ function totalText(it, r) {
   if (!us.length) return '0' + (r.zeroUnit ? uName(r.zeroUnit) : '');
   return us.map(function (u) { return fmtN(r.sums[u]) + uName(u); }).join('＋');
 }
+/* 前回の数量の表示用（複数の保管場所は合計。単位が違えば並べる） */
+function prevText(it, keys) {
+  var es = keys.map(function (k) { return getP(it.id, k); }).filter(Boolean);
+  if (!es.length) return '';
+  if (it.cat === 'cash') {
+    var n = es.reduce(function (a, e) { return a + e.q; }, 0);
+    return it.kind === 'yen' ? yen(n) + '円' : n + '枚';
+  }
+  var sums = {}, zu = null;
+  es.forEach(function (e) { if (e.q > 0) { var u = e.u || ''; sums[u] = r2((sums[u] || 0) + e.q); } else if (e.u && !zu) zu = e.u; });
+  return totalText(it, { sums: sums, zeroUnit: zu });
+}
 function stats() {
   var s = { total: 0, done: 0, short: 0, mism: 0, cash: 0, cats: { food: [0, 0], supply: [0, 0], cash: [0, 0] } };
   activeItems().forEach(function (it) {
@@ -600,49 +639,39 @@ function reportQty(it) {
   if (!r.complete) return '未確認' + parts;
   return totalText(it, r) + parts;
 }
-function buyLines() {
+/* LINEに送るのは「必要在庫数を下回っている項目」だけ（単位が違って判定できない項目は含めない） */
+function shortItems() {
   var out = [];
   ['food', 'supply'].forEach(function (c) {
-    activeItems().forEach(function (it) {
-      if (it.cat !== c) return;
-      var r = calc(it);
-      if (r.st === 'short') out.push(it.name + '：' + fmtN(r.need) + uName(it.req.u));
-      else if (r.st === 'mismatch') out.push(it.name + '：単位の確認が必要（在庫 ' + totalText(it, r) + '／必要在庫 ' + fmtN(it.req.q) + uName(it.req.u) + '）');
-    });
+    activeItems().forEach(function (it) { if (it.cat === c && calc(it).st === 'short') out.push(it); });
   });
   return out;
 }
+function mismatchItems() { return activeItems().filter(function (it) { return it.cat !== 'cash' && calc(it).st === 'mismatch'; }); }
+function buyLines() {
+  return shortItems().map(function (it) {
+    var r = calc(it), u = uName(it.req.u);
+    return it.name + '：購入 ' + fmtN(r.need) + u + '（在庫 ' + totalText(it, r) + '／必要 ' + fmtN(it.req.q) + u + '）';
+  });
+}
+/* LINE報告：購入必要品（必要在庫を下回っているもの）と金庫内現金だけ */
 function buildReport() {
   var L = [], st = stats(), act = activeItems();
   L.push('【締め作業・在庫報告】');
   L.push(fmtDate(S.date));
   L.push('');
-  ['food', 'supply'].forEach(function (c) {
-    var its = act.filter(function (i) { return i.cat === c; });
-    if (!its.length) return;
-    L.push('■' + CAT_LABEL[c]);
-    its.forEach(function (it) { L.push(it.name + '：' + reportQty(it)); });
-    L.push('');
-  });
   L.push('■購入必要品');
   var b = buyLines();
   if (b.length) b.forEach(function (x) { L.push(x); }); else L.push('購入必要品なし');
-  L.push('');
   var cash = act.filter(function (i) { return i.cat === 'cash'; });
   if (cash.length) {
+    L.push('');
     L.push('■金庫内現金');
     cash.forEach(function (it) { L.push(it.name + '：' + reportQty(it)); });
     L.push('');
     var allDone = cash.every(function (it) { return calc(it).complete; });
     L.push('合計：' + yen(st.cash) + '円' + (allDone ? '' : '（未確認の項目を除く）'));
-    L.push('');
   }
-  L.push('■確認状況');
-  L.push(st.total + '項目中' + st.done + '項目確認済み');
-  var un = unconfirmed();
-  if (un.length) L.push('未確認：' + un.map(function (i) { return i.name; }).join('、'));
-  L.push('');
-  L.push('以上');
   return L.join('\n');
 }
 function buildBuyText() {
@@ -677,10 +706,13 @@ function renderStart() {
   var today = todayStr();
   var h = '<div class="start"><div class="start-in"><h1>在庫確認</h1><p class="today">' + fmtDate(today, true) + '</p>';
   if (S && hasEntries(S) && S.date !== today) {
-    var st = stats();
-    h += '<div class="resume"><p><b>' + fmtDate(S.date, true) + '</b>の在庫確認が途中のままです（' + st.done + ' / ' + st.total + '項目 入力済み）。</p>' +
-      '<button class="btn primary big" data-act="resume">続きから入力する</button>' +
-      '<button class="btn secondary" data-act="new-start">新しく開始する</button></div>';
+    var st = stats(), d = fmtDateShort(S.date);
+    var finished = !!S.copiedAt || st.done === st.total;   // 報告済み・全部入力済みなら、今日の分を始めるのが普通
+    var bNew = '<button class="btn ' + (finished ? 'primary big' : 'secondary') + '" data-act="new-start">今日の在庫確認を開始</button>';
+    var bOld = '<button class="btn ' + (finished ? 'secondary' : 'primary big') + '" data-act="resume">' + d + 'の続きを入力する</button>';
+    h += '<div class="resume"><p><b>' + fmtDate(S.date, true) + '</b>の在庫確認が終了していません（' + st.done + ' / ' + st.total + '項目 入力済み' + (S.copiedAt ? '・報告コピー済み' : '') + '）。</p>' +
+      '<p class="note">今日の在庫確認を始めると、' + d + 'に入力した数量が「前回」の数量として引き継がれます。</p>' +
+      (finished ? bNew + bOld : bOld + bNew) + '</div>';
   } else if (S && S.date === today) {
     h += '<button class="btn primary big" data-act="resume">在庫確認を再開</button>';
   } else {
@@ -690,6 +722,7 @@ function renderStart() {
   $('#scr-start').innerHTML = h;
 }
 function beginSession() {
+  if (S && hasEntries(S)) rollIntoPrev(S);   // 終了し忘れた前回の入力も「前回の数量」として引き継ぐ
   S = { date: todayStr(), startedAt: Date.now(), entries: {}, copiedAt: null, ack: null };
   saveSession();
   UI.filter = 'all'; saveUI();
@@ -711,16 +744,18 @@ function cashSub(it, r) {
   return r.done ? '= ' + yen(r.amount) + '円' : yen(it.value) + '円 × 枚数';
 }
 function cardHTML(it, r, lk) {
-  var st, qty, sub;
+  var st, qty, sub, pq = '';
   if (lk) {
     var e = getE(it.id, lk);
     st = !e ? 'todo' : (r.complete ? r.st : 'done');
     qty = e ? entryText(it, e) : '';
+    pq = e ? '' : prevText(it, [lk]);
     if (r.n > 1) sub = 'ほかの場所：' + r.ks.filter(function (k) { return k !== lk; }).map(function (k) { var ee = getE(it.id, k); return lName(k) + ' ' + (ee ? entryText(it, ee) : '未入力'); }).join('・');
     else sub = it.cat === 'cash' ? cashSub(it, r) : CAT_LABEL[it.cat];
   } else {
     st = r.st;
     qty = r.done ? totalText(it, r) : '';
+    pq = r.done ? '' : prevText(it, r.ks);
     if (r.n > 1) sub = r.ks.map(function (k, i) { return lName(k) + ' ' + (r.es[i] ? entryText(it, r.es[i]) : '未入力'); }).join('・');
     else sub = it.cat === 'cash' ? cashSub(it, r) : lName(r.ks[0]);
   }
@@ -731,7 +766,7 @@ function cardHTML(it, r, lk) {
   return '<button class="card st-' + st + (need ? ' has-need' : '') + '" data-act="open" data-id="' + esc(it.id) + '"' + (lk ? ' data-k="' + esc(lk) + '"' : '') + ' id="card-' + esc(it.id) + (lk ? '-' + esc(lk) : '') + '">' +
     '<span class="c-ic">' + stIcon(st) + '</span>' +
     '<span class="c-name">' + esc(it.name) + '</span>' +
-    '<span class="c-qty num">' + (qty ? esc(qty) : '<span class="dash">—</span>') + '</span>' +
+    '<span class="c-qty num">' + (qty ? esc(qty) : pq ? '<span class="prev">前回 ' + esc(pq) + '</span>' : '<span class="dash">—</span>') + '</span>' +
     '<span class="c-sub">' + esc(sub) + '</span>' +
     '<span class="c-st">' + lbl + '</span>' + need + '</button>';
 }
@@ -836,7 +871,10 @@ function openInput(id, k, swap) {
   var ks = keysOf(it);
   if (!k || ks.indexOf(k) < 0) k = ks.filter(function (x) { return !getE(id, x); })[0] || ks[0];
   var e = getE(id, k);
-  inp = { id: id, k: k, draft: e ? String(e.q) : '', fresh: !!e, unit: e && e.u && unitById(e.u) ? e.u : defUnit(it), err: '', touched: false };
+  var p = e ? null : getP(id, k);   // 未入力なら、前回の数量を最初から表示する（保存するまでは未入力のまま）
+  var src = e || p;
+  inp = { id: id, k: k, draft: src ? String(src.q) : '', fresh: !!src, carried: !e && !!p, prevDate: p ? p.d : null,
+    unit: src && src.u && unitById(src.u) ? src.u : defUnit(it), err: '', touched: false };
   $('#ov-input').hidden = false;
   updateLock();
   renderInput(swap);
@@ -852,8 +890,8 @@ function renderInput(swap) {
     '<button class="icon-btn" data-act="in-close" aria-label="閉じる">' + ico('close') + '</button></div>';
   if (multi) {
     h += '<div class="in-tabs' + (swap ? ' swap' : '') + '">' + ks.map(function (k) {
-      var ee = getE(it.id, k);
-      return '<button class="in-tab' + (ee ? ' done' : '') + '" data-act="in-tab" data-k="' + esc(k) + '" aria-pressed="' + (k === inp.k) + '">' + ico('pin') + esc(lName(k)) + '<span class="q">' + esc(ee ? entryText(it, ee) : '未入力') + '</span></button>';
+      var ee = getE(it.id, k), pp = ee ? null : getP(it.id, k);
+      return '<button class="in-tab' + (ee ? ' done' : '') + '" data-act="in-tab" data-k="' + esc(k) + '" aria-pressed="' + (k === inp.k) + '">' + ico('pin') + esc(lName(k)) + '<span class="q">' + esc(ee ? entryText(it, ee) : pp ? '未入力（前回 ' + entryText(it, pp) + '）' : '未入力') + '</span></button>';
     }).join('') + '</div>';
   }
   var keys = ['7', '8', '9', 'bs', '4', '5', '6', 'clr', '1', '2', '3', 'none', '0', '.'];
@@ -877,8 +915,10 @@ function updInput() {
   var it = itemById(inp.id), d = inp.draft, q = draftQ();
   var unitLbl = it.cat === 'cash' ? (it.kind === 'yen' ? '円' : '枚') : uName(inp.unit);
   var val = $('#in-val');
+  var carry = inp.carried && !inp.touched && d !== '';
   if (d === '') val.innerHTML = '<span class="ph">数量を入力</span>';
-  else val.innerHTML = '<span class="v num">' + esc(it.cat === 'cash' && it.kind === 'yen' ? yen(q) : d) + '</span>' + (unitLbl ? '<span class="u">' + esc(unitLbl) + '</span>' : '');
+  else val.innerHTML = (carry ? '<span class="carry">前回' + (inp.prevDate ? '<br>' + esc(inp.prevDate.slice(5).replace('-', '/').replace(/^0/, '').replace('/0', '/')) : '') + '</span>' : '') +
+    '<span class="v num">' + esc(it.cat === 'cash' && it.kind === 'yen' ? yen(q) : d) + '</span>' + (unitLbl ? '<span class="u">' + esc(unitLbl) + '</span>' : '');
   val.classList.toggle('fresh', inp.fresh && d !== '');
 
   var uh = '';
@@ -887,8 +927,9 @@ function updInput() {
       return '<button class="unit" data-act="unit" data-u="' + esc(u.id) + '" aria-pressed="' + (u.id === inp.unit) + '">' + esc(u.name) + '</button>';
     }).join('') + '</div>';
     if (inp.err === 'unit') uh += '<p class="u-msg err">単位を選んでください</p>';
+    else if (carry) uh += '<p class="u-msg">前回の数量です。同じならそのまま保存、違えば数字を押して入れ直します</p>';
     else if (!defUnit(it)) uh += '<p class="u-msg">選んだ単位は、次回からこの項目で自動的に選ばれます</p>';
-  }
+  } else if (carry) uh = '<p class="u-msg">前回の数量です。同じならそのまま保存、違えば数字を押して入れ直します</p>';
   $('#in-units').innerHTML = uh;
 
   var ch = '', draftE = q === null ? null : { q: q, u: it.cat === 'cash' ? null : inp.unit };
@@ -1064,16 +1105,20 @@ function openDateSheet() {
 
 /* ================= 報告画面 ================= */
 function renderReport() {
-  var un = unconfirmed();
-  $('#rp-warn').innerHTML = un.length ? '<div class="warn-box"><p><b>未確認の項目が' + un.length + '件あります。</b>報告では「未確認」と表示されます。</p>' +
-    '<p class="names">' + esc(un.slice(0, 15).map(function (i) { return i.name; }).join('、')) + (un.length > 15 ? ' ほか' + (un.length - 15) + '件' : '') + '</p>' +
-    '<button class="btn secondary" data-act="go-todo">未入力の項目を入力する</button></div>' : '';
+  var un = unconfirmed(), mis = mismatchItems();
+  var names = function (list, n) { return esc(list.slice(0, n).map(function (i) { return i.name; }).join('、')) + (list.length > n ? ' ほか' + (list.length - n) + '件' : ''); };
+  $('#rp-warn').innerHTML = (un.length ? '<div class="warn-box"><p><b>未確認の項目が' + un.length + '件あります。</b>未確認の項目は、購入必要品かどうかを判定できません。</p>' +
+    '<p class="names">' + names(un, 15) + '</p>' +
+    '<button class="btn secondary" data-act="go-todo">未入力の項目を入力する</button></div>' : '') +
+    (mis.length ? '<div class="warn-box mis-box"><p><b>単位が違うため判定できない項目が' + mis.length + '件あります。</b>報告には含まれません。</p>' +
+    '<p class="names">' + names(mis, 15) + '</p>' +
+    '<button class="btn secondary" data-act="go-buy">確認する</button></div>' : '');
   var reqN = activeItems().filter(function (i) { return i.cat !== 'cash' && i.req; }).length;
   $('#rp-note').innerHTML = reqN ? '' : '<p class="note">必要在庫数が1件も設定されていないため、購入必要品は判定していません。設定の「商品・備品」から登録できます。</p>';
   $('#rp-text').textContent = buildReport();
   var c = $('#rp-copied');
   c.hidden = !S.copiedAt;
-  c.textContent = S.copiedAt ? '報告全文をコピー済み（' + hhmm(S.copiedAt) + '）' : '';
+  c.textContent = S.copiedAt ? '報告をコピー済み（' + hhmm(S.copiedAt) + '）' : '';
 }
 function onCopy(kind) {
   var text = kind === 'all' ? buildReport() : buildBuyText();
@@ -1081,7 +1126,7 @@ function onCopy(kind) {
   if (un.length) {
     confirmDialog({
       title: '未確認の項目があります',
-      body: '<p>' + un.length + '件が未入力です。' + (kind === 'all' ? '報告では「未確認」と表示されます。' : '未確認の項目は購入判定に含まれていません。') + '</p><span class="names">' + esc(un.slice(0, 10).map(function (i) { return i.name; }).join('、')) + (un.length > 10 ? ' ほか' + (un.length - 10) + '件' : '') + '</span>',
+      body: '<p>' + un.length + '件が未入力です。未確認の項目は、購入必要品かどうかを判定できません。</p><span class="names">' + esc(un.slice(0, 10).map(function (i) { return i.name; }).join('、')) + (un.length > 10 ? ' ほか' + (un.length - 10) + '件' : '') + '</span>',
       ok: 'このままコピー', cancel: '戻る'
     }, function () { doCopy(text, kind); });
   } else doCopy(text, kind);
@@ -1091,7 +1136,7 @@ function doCopy(text, kind) {
     if (ok) {
       if (kind === 'all') { S.copiedAt = Date.now(); saveSession(); }
       if (screen === 'report') renderReport();
-      toast(kind === 'all' ? '報告全文をコピーしました。LINEに貼り付けて送信してください' : '購入必要品をコピーしました', true);
+      toast(kind === 'all' ? '報告をコピーしました。LINEに貼り付けて送信してください' : '購入必要品をコピーしました', true);
     } else openManualCopy(text, kind);
   });
 }
@@ -1135,13 +1180,14 @@ function openManualCopy(text, kind) {
 function onEnd() {
   confirmDialog({
     title: '在庫確認を終了しますか',
-    body: '<p>今回入力した数量と現金の内容を消去します。商品・保管場所などの設定は残ります。</p>' + (S.copiedAt ? '' : '<p class="warn-t"><b>報告全文はまだコピーされていません。</b></p>'),
-    ok: '終了して入力を消去', okKind: 'danger', cancel: 'キャンセル'
+    body: '<p>今回入力した数量は、次回の入力画面に「前回」の数量として表示されます。商品・保管場所などの設定も残ります。</p>' + (S.copiedAt ? '' : '<p class="warn-t"><b>報告はまだコピーされていません。終了すると、この日の報告は作れなくなります。</b></p>'),
+    ok: '終了する', cancel: 'キャンセル'
   }, function () {
+    rollIntoPrev(S);
     S = null; lsSet(K_SESSION, null);
     UI.filter = 'all'; saveUI(); mainScrollY = 0;
     show('start');
-    toast('入力内容を消去しました', true);
+    toast('在庫確認を終了しました。次回は今回の数量から入力できます', true);
   });
 }
 
@@ -1232,6 +1278,7 @@ function openItemEdit(id) {
       confirmDialog({ title: '「' + (src.name || '') + '」を削除しますか', body: '<p>この項目の設定と、今回入力した数量が消えます。一時的に外すだけなら「在庫確認と報告に表示する」をオフにしてください。</p>', ok: '削除', okKind: 'danger' }, function () {
         M.items.splice(M.items.indexOf(src), 1);
         if (S && S.entries[src.id]) { delete S.entries[src.id]; saveSession(); }
+        if (P.entries[src.id]) { delete P.entries[src.id]; savePrev(); }
         saveMaster(); L.close(); renderSettings(); toast('削除しました', true);
       });
     },
@@ -1365,7 +1412,8 @@ var ACT = {
   begin: beginSession,
   resume: function () { S.ack = todayStr(); saveSession(); show('main'); },
   'new-start': function () {
-    confirmDialog({ title: '新しく開始しますか', body: '<p>' + fmtDate(S.date, true) + 'に入力した内容を消去して、今日の在庫確認を始めます。</p>', ok: '消去して開始', okKind: 'danger' }, beginSession);
+    if (S.copiedAt) { beginSession(); return; }
+    confirmDialog({ title: '今日の在庫確認を開始しますか', body: '<p>' + fmtDate(S.date, true) + 'の報告はまだコピーされていません。今日の在庫確認を始めると、' + fmtDateShort(S.date) + 'の報告は作れなくなります。入力した数量は「前回」の数量として引き継がれます。</p>', ok: '今日の在庫確認を開始' }, beginSession);
   },
   settings: function () { show('settings'); },
   'set-back': function () { show((prevScreen === 'main' || prevScreen === 'report') && S ? prevScreen : 'start'); },
@@ -1378,6 +1426,7 @@ var ACT = {
   report: function () { show('report'); },
   'go-main': function () { show('main'); },
   'go-todo': function () { UI.filter = 'todo'; saveUI(); mainScrollY = 0; show('main'); },
+  'go-buy': function () { UI.filter = 'buy'; saveUI(); mainScrollY = 0; show('main'); },
   key: function (b) { if (inp) pressKey(b.dataset.k); },
   unit: function (b) { if (!inp) return; inp.unit = b.dataset.u; inp.err = ''; inp.touched = true; updInput(); },
   'in-tab': function (b) { if (inp) switchTab(b.dataset.k); },
