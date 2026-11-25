@@ -10,6 +10,13 @@
 | `sw.js` | 任意。`index.html` と同じ場所に置くと、通信できないときも起動できるようになります |
 | `.claude/launch.json` | 開発中のプレビュー用。運用には不要です |
 
+## 公開先
+
+- アプリの URL：https://wsty-gif.github.io/zaiko/
+- リポジトリ：https://github.com/wsty-gif/zaiko （公開リポジトリ。GitHub Pages で配信）
+- 更新するとき：`index.html` を直して commit・push すると、数分〜10分ほどで公開先が新しい版になります。iPad は、次に通信できる状態で開いたときに新しい版を読み込みます。入力データと設定は消えません。
+- データ（在庫数・現金・設定）は iPad の中にだけ保存され、GitHub には送られません。
+
 ## iPad への設置
 
 1. `index.html` と `sw.js` を、HTTPS で配信できる場所に置きます（例：GitHub Pages、Cloudflare Pages、Netlify、店舗の社内サーバー）。
