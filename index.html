@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<meta name="theme-color" content="#F8F5F1">
+<meta name="format-detection" content="telephone=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="在庫確認">
+<title>在庫確認</title>
+<style>
+:root{
+  color-scheme: light;
+  --bg:#F8F5F1;
+  --surface:#FFFFFF;
+  --surface-2:#F2EDE7;
+  --surface-3:#E8E0D7;
+  --line:#E4DCD3;
+  --line-strong:#CDC1B4;
+  --text:#2A2421;
+  --text-2:#6B615A;
+  --text-3:#776D65;
+  --brand:#6B4436;
+  --brand-press:#553429;
+  --brand-soft:#F3EAE4;
+  --fresh:#EBDCD2;
+  --ok:#276B43;
+  --ok-bg:#EAF5EE;
+  --ok-line:#A7D3B8;
+  --warn:#A84B08;
+  --warn-bg:#FFF0E3;
+  --warn-line:#EFB07C;
+  --unit:#7F5D00;
+  --unit-bg:#FFF7D6;
+  --unit-line:#E2C55E;
+  --todo-line:#DDD4CB;
+  --danger:#B3261E;
+  --danger-line:#E3B5B1;
+  --shadow:0 1px 2px rgba(60,40,30,.06),0 2px 8px rgba(60,40,30,.04);
+  --sa-t:env(safe-area-inset-top,0px);
+  --sa-b:env(safe-area-inset-bottom,0px);
+  --sa-l:env(safe-area-inset-left,0px);
+  --sa-r:env(safe-area-inset-right,0px);
+  --gut-l:max(20px,var(--sa-l));
+  --gut-r:max(20px,var(--sa-r));
+  --top-h:150px;
+  --foot-h:92px;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;background:var(--bg);touch-action:manipulation}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--text);
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI",Meiryo,sans-serif;
+  font-size:17px;line-height:1.5;font-feature-settings:"palt" 1;
+  -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;-webkit-touch-callout:none;overflow-x:hidden}
+html.lock,html.lock body{overflow:hidden}
+h1,h2,h3,p{margin:0}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;margin:0;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+button:disabled{cursor:default}
+input,textarea{font:inherit;font-size:17px;color:var(--text);-webkit-user-select:text;user-select:text}
+[hidden]{display:none !important}
+.num{font-variant-numeric:tabular-nums}
+svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+/* buttons */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:56px;padding:0 20px;border-radius:12px;font-size:18px;font-weight:600;border:1.5px solid transparent;text-align:center;line-height:1.3;transition:background-color .12s ease-out,opacity .12s ease-out}
+.btn.primary{background:var(--brand);color:#fff}
+.btn.primary:active{background:var(--brand-press)}
+.btn.secondary{background:var(--surface);color:var(--brand);border-color:var(--line-strong)}
+.btn.secondary:active{background:var(--surface-2)}
+.btn.danger{background:var(--danger);color:#fff}
+.btn.danger-outline{background:var(--surface);color:var(--danger);border-color:var(--danger-line)}
+.btn.danger-outline:active{background:#FBEDEC}
+.btn.ghost{min-height:48px;padding:0 12px;color:var(--brand)}
+.btn.ghost:active{background:var(--surface-2)}
+.btn.sm{min-height:44px;padding:0 16px;font-size:16px}
+.btn:disabled{opacity:.45}
+.icon-btn{width:48px;height:48px;display:inline-flex;align-items:center;justify-content:center;border-radius:12px;color:var(--text-2);flex:none}
+.icon-btn:active{background:var(--surface-2)}
+.icon-btn:disabled{opacity:.3}
+.icon-btn.danger{color:var(--danger)}
+
+/* start */
+.start{min-height:100vh;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:calc(32px + var(--sa-t)) var(--gut-r) calc(32px + var(--sa-b)) var(--gut-l)}
+.start-in{width:min(520px,100%);display:grid;gap:24px;justify-items:center;text-align:center}
+.start h1{font-size:28px;font-weight:700}
+.start .today{font-size:20px;color:var(--text-2);margin-top:-12px}
+.btn.big{min-height:84px;width:100%;font-size:22px;border-radius:16px}
+.resume{width:100%;display:grid;gap:12px;padding:24px;background:var(--surface);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow)}
+.resume p{line-height:1.7;margin-bottom:4px}
+
+/* main header */
+.main-top{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);padding:calc(8px + var(--sa-t)) var(--gut-r) 12px var(--gut-l)}
+.hdr{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;min-height:60px}
+.date-btn{display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:0 12px;margin-left:-12px;border-radius:12px;font-size:18px;font-weight:600;white-space:nowrap}
+.date-btn:active{background:var(--surface-2)}
+.date-btn svg{color:var(--text-2)}
+.prog{flex:1 1 120px;min-width:100px;display:grid;gap:8px}
+.prog-txt{display:flex;align-items:baseline;gap:8px;font-size:15px;color:var(--text-2);white-space:nowrap}
+.prog-txt b{font-size:24px;color:var(--text);font-weight:700}
+.bar{height:8px;border-radius:4px;background:var(--surface-3);overflow:hidden}
+.bar>i{display:block;height:100%;background:var(--ok);border-radius:4px;transform-origin:left center;transition:transform .2s ease-out}
+.buy-chip{display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:0 16px;border-radius:12px;background:var(--surface);border:1.5px solid var(--line);font-weight:600;white-space:nowrap}
+.buy-chip b{font-size:20px}
+.buy-chip.on{background:var(--warn-bg);border-color:var(--warn-line);color:var(--warn)}
+.buy-chip .mis{font-size:14px;color:var(--unit);font-weight:600}
+@media (max-width:860px){
+  .hdr{gap:8px}
+  .date-btn svg{display:none}
+  .hdr .seg button{padding:0 12px}
+  .buy-chip{padding:0 12px}
+}
+.tools{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;margin-top:8px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;flex:1;min-width:0}
+.chip{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:10px;background:var(--surface);border:1.5px solid var(--line);font-size:16px;font-weight:600;color:var(--text-2);white-space:nowrap}
+.chip .c{font-weight:400;font-variant-numeric:tabular-nums}
+.chip:active{background:var(--surface-2)}
+.chip[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:#fff}
+.seg{display:inline-flex;background:var(--surface-3);border-radius:12px;padding:4px;gap:4px}
+.seg button{min-height:44px;padding:0 16px;border-radius:9px;font-size:16px;font-weight:600;color:var(--text-2);white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--text);box-shadow:0 1px 2px rgba(0,0,0,.1)}
+.locjump{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.locjump .chip{color:var(--text);background:var(--surface-2);border-color:transparent}
+.locjump .chip svg{width:18px;height:18px;color:var(--text-2);margin-right:-4px}
+
+/* list */
+.list{padding:20px var(--gut-r) calc(var(--foot-h) + 32px + var(--sa-b)) var(--gut-l)}
+.sec{scroll-margin-top:calc(var(--top-h) + 12px)}
+.sec + .sec{margin-top:32px}
+.sec-h{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 12px;margin:0 0 12px;font-size:20px;font-weight:700}
+.sec-h .cnt{font-size:15px;font-weight:400;color:var(--text-2)}
+.sec-h .tot{margin-left:auto;font-size:17px;font-weight:600}
+.sec-h .tot b{font-size:22px}
+.sec-h .tot small{font-size:14px;font-weight:400;color:var(--text-2)}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.empty{padding:48px 0;text-align:center;color:var(--text-2)}
+
+/* card */
+.card{display:grid;grid-template-columns:32px minmax(0,1fr) auto;grid-template-areas:"ic name qty" "ic sub st";column-gap:12px;row-gap:4px;align-items:center;align-content:center;width:100%;min-height:88px;padding:16px;text-align:left;background:var(--surface);border:1.5px solid var(--todo-line);border-radius:16px;box-shadow:var(--shadow);transition:opacity .1s ease-out;scroll-margin-top:calc(var(--top-h) + 12px);scroll-margin-bottom:calc(var(--foot-h) + 16px + var(--sa-b))}
+.card.has-need{grid-template-areas:"ic name qty" "ic sub st" "ic need need"}
+.card:active{opacity:.7}
+.c-ic{grid-area:ic;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--todo-line)}
+.c-ic svg{width:20px;height:20px;stroke-width:3}
+.c-name{grid-area:name;font-size:19px;font-weight:600;line-height:1.35;overflow-wrap:anywhere}
+.c-qty{grid-area:qty;font-size:24px;font-weight:700;text-align:right;white-space:nowrap;line-height:1.2}
+.c-qty .dash{color:var(--line-strong);font-weight:400}
+.c-sub{grid-area:sub;font-size:14px;color:var(--text-2);line-height:1.45;overflow-wrap:anywhere}
+.c-st{grid-area:st;font-size:14px;font-weight:600;text-align:right;white-space:nowrap;color:var(--text-3)}
+.c-need{grid-area:need;justify-self:start;margin-top:4px;padding:4px 12px;border-radius:8px;font-size:15px;font-weight:700;color:var(--warn);background:var(--surface);border:1.5px solid var(--warn-line)}
+.c-need.mis{color:var(--unit);border-color:var(--unit-line)}
+.st-partial .c-ic{border:2px dashed var(--ok)}
+.st-partial .c-st{color:var(--ok)}
+.st-done{background:var(--ok-bg);border-color:var(--ok-line)}
+.st-done .c-ic{background:var(--ok);border-color:var(--ok);color:#fff}
+.st-done .c-st{color:var(--ok)}
+.st-short{background:var(--warn-bg);border-color:var(--warn-line)}
+.st-short .c-ic{background:var(--warn);border-color:var(--warn);color:#fff}
+.st-short .c-st{color:var(--warn)}
+.st-mismatch{background:var(--unit-bg);border-color:var(--unit-line)}
+.st-mismatch .c-ic{background:var(--unit);border-color:var(--unit);color:#fff}
+.st-mismatch .c-st{color:var(--unit)}
+
+/* action bar */
+.action-bar{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;gap:12px;padding:12px var(--gut-r) calc(12px + var(--sa-b)) var(--gut-l);background:var(--surface);border-top:1px solid var(--line)}
+.action-bar .btn{flex:1;min-height:64px;font-size:19px}
+.action-bar .btn.grow{flex:1.4}
+
+/* generic header bar for sub screens */
+.top-wrap{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--line);padding:var(--sa-t) var(--gut-r) 0 var(--gut-l)}
+.bar-hdr{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;min-height:64px}
+.bar-hdr .btn.ghost{justify-self:start;margin-left:-12px;font-size:17px}
+.bar-hdr h1{font-size:20px;font-weight:700;text-align:center}
+.set-tabs{margin:0 0 12px}
+
+/* report */
+.rp{max-width:760px;margin:0 auto;padding:20px var(--gut-r) calc(var(--foot-h) + 32px + var(--sa-b)) var(--gut-l);display:grid;gap:20px}
+.rp > div:empty{display:none}
+.warn-box{display:grid;gap:12px;padding:16px 20px;border:1.5px solid var(--warn-line);background:var(--warn-bg);border-radius:16px;line-height:1.7}
+.warn-box .names{font-size:15px;color:var(--text-2)}
+.warn-box .btn{justify-self:start}
+.note{font-size:15px;color:var(--text-2);line-height:1.7}
+.rp-text{background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:20px 24px;white-space:pre-wrap;font-size:17px;line-height:1.75;-webkit-user-select:text;user-select:text;-webkit-touch-callout:default;overflow-wrap:anywhere;box-shadow:var(--shadow)}
+.rp-end{display:grid;gap:12px;padding:20px;border:1px solid var(--line);border-radius:16px;background:var(--surface)}
+.rp-end h2{font-size:18px}
+.rp-end .btn{justify-self:start}
+.copied{font-size:15px;color:var(--ok);font-weight:600}
+
+/* overlays */
+.overlay{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;padding:calc(12px + var(--sa-t)) max(12px,var(--sa-r)) 0 max(12px,var(--sa-l));background:rgba(42,36,33,.42);overscroll-behavior:contain;animation:fade .15s ease-out}
+.sheet{width:min(640px,100%);max-height:100%;overflow:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;background:var(--surface);border-radius:20px 20px 0 0;padding:20px 24px calc(20px + var(--sa-b));animation:rise .18s ease-out}
+.sheet.small{width:min(520px,100%)}
+.sheet.form{width:min(720px,100%);display:flex;flex-direction:column;padding:0;overflow:hidden;max-height:calc(100vh - 24px);max-height:calc(100dvh - 24px - var(--sa-t))}
+.sheet.form .sh-head{padding:16px 24px 12px;border-bottom:1px solid var(--line)}
+.sheet.form .form-body{flex:1;min-height:0;overflow:auto;-webkit-overflow-scrolling:touch;padding:16px 24px 24px;display:grid;gap:20px;align-content:start}
+.sheet.form .sh-foot{padding:12px 24px calc(12px + var(--sa-b));border-top:1px solid var(--line);margin:0}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@keyframes rise{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
+@keyframes swapIn{from{opacity:.25}to{opacity:1}}
+.sh-head{display:flex;align-items:center;gap:12px;min-height:48px}
+.sh-head h2{flex:1;font-size:20px;font-weight:700;line-height:1.4}
+.sh-foot{display:flex;gap:12px;margin-top:20px}
+.sh-foot .btn{flex:1;min-height:60px}
+.cf-body{margin-top:8px;line-height:1.75}
+.cf-body .warn-t{color:var(--warn)}
+.cf-body .names{display:block;margin-top:8px;font-size:15px;color:var(--text-2)}
+
+/* input sheet */
+.sheet.input{padding:16px 24px calc(16px + var(--sa-b))}
+.in-head{display:flex;align-items:flex-start;gap:8px}
+.in-title{flex:1;min-width:0}
+.in-meta{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;font-size:15px;color:var(--text-2);min-height:28px}
+.loc-tag{display:inline-flex;align-items:center;gap:4px;padding:4px 12px 4px 8px;border-radius:8px;background:var(--brand-soft);color:var(--brand);font-weight:600}
+.loc-tag svg{width:18px;height:18px}
+.loc-tag.none{background:var(--surface-2);color:var(--text-2)}
+.in-remain{margin-left:auto}
+.in-name{margin-top:4px;font-size:28px;font-weight:700;line-height:1.3;overflow-wrap:anywhere}
+.in-memo{margin-top:4px;font-size:15px;color:var(--text-2);line-height:1.6}
+.in-tabs{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.in-tab{display:inline-flex;align-items:center;gap:8px;min-height:48px;padding:0 16px;border-radius:10px;border:1.5px solid var(--line-strong);background:var(--surface);font-weight:600}
+.in-tab .q{font-weight:400;color:var(--text-2)}
+.in-tab.done .q{color:var(--ok);font-weight:600}
+.in-tab[aria-pressed="true"]{border-color:var(--brand);background:var(--brand-soft);color:var(--brand)}
+.in-body{display:grid;gap:16px;margin-top:16px}
+.in-left{display:grid;gap:12px;align-content:start}
+.in-disp{display:grid;grid-template-columns:76px minmax(0,1fr) 76px;gap:12px}
+.step{min-height:76px;border-radius:14px;background:var(--surface-2);font-size:22px;font-weight:700;color:var(--text)}
+.step:active,.key:active{background:var(--surface-3)}
+.val{display:flex;align-items:center;justify-content:center;gap:8px;min-height:76px;padding:8px 12px;border-radius:14px;border:2px solid var(--line-strong);background:var(--surface);overflow:hidden}
+.val .v{font-size:42px;font-weight:700;line-height:1.1;padding:2px 8px;border-radius:8px;white-space:nowrap}
+.val.fresh .v{background:var(--fresh)}
+.val .u{font-size:22px;font-weight:600;color:var(--text-2);white-space:nowrap}
+.val .ph{font-size:20px;color:var(--text-3)}
+.units{display:flex;flex-wrap:wrap;gap:8px}
+.unit{min-width:76px;min-height:56px;padding:0 16px;border-radius:12px;border:1.5px solid var(--line-strong);background:var(--surface);font-size:20px;font-weight:600}
+.unit:active{background:var(--surface-2)}
+.unit[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:#fff}
+.units.err .unit:not([aria-pressed="true"]){border-color:var(--danger)}
+.u-msg{margin-top:8px;font-size:15px;color:var(--text-2)}
+.u-msg.err{color:var(--danger);font-weight:600}
+.calc{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 16px;padding:12px 16px;border-radius:12px;background:var(--surface-2);font-size:17px;line-height:1.5;min-height:52px}
+.calc .muted{color:var(--text-2)}
+.calc b{font-variant-numeric:tabular-nums}
+.calc .need{color:var(--warn);font-weight:700}
+.calc .ok{color:var(--ok);font-weight:600}
+.calc .mis{color:var(--unit);font-weight:600}
+.pad{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:68px;gap:8px}
+.key{border-radius:12px;background:var(--surface-2);font-size:28px;font-weight:600;font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:center}
+.key.fn{font-size:18px;color:var(--text-2)}
+.key.zero{grid-column:span 2}
+.key.none{grid-row:span 2;flex-direction:column;gap:2px;background:var(--surface);border:2px solid var(--line-strong);font-size:19px;font-weight:700;color:var(--text);line-height:1.3}
+.key.none small{font-size:14px;font-weight:400;color:var(--text-2)}
+.key.none:active{background:var(--surface-2)}
+.key:disabled{opacity:.3}
+.in-foot{display:grid;grid-template-columns:1fr 1.4fr;gap:12px;margin-top:16px}
+.in-foot .btn{min-height:64px;font-size:19px}
+.swap{animation:swapIn .2s ease-out}
+@media (orientation:landscape) and (min-width:900px){
+  .overlay{align-items:center;padding-bottom:calc(12px + var(--sa-b))}
+  .sheet{border-radius:20px;padding-bottom:20px}
+  .sheet.input{width:min(1000px,100%);padding-bottom:16px}
+  .sheet.form .sh-foot{padding-bottom:12px}
+  .in-body{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:24px;align-items:start}
+  .pad{grid-auto-rows:62px}
+}
+@media (max-height:760px) and (orientation:landscape){
+  .in-name{font-size:24px}
+  .step,.val{min-height:64px}
+  .val .v{font-size:36px}
+  .unit{min-height:52px}
+  .pad{grid-auto-rows:58px}
+  .in-foot .btn{min-height:58px}
+}
+
+/* settings */
+.set-body{max-width:880px;margin:0 auto;padding:20px var(--gut-r) calc(40px + var(--sa-b)) var(--gut-l);display:grid;gap:24px}
+.set-tools{display:flex;flex-wrap:wrap;gap:12px}
+.set-sec .sec-h{margin-bottom:8px}
+.set-list{list-style:none;margin:0;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden}
+.set-row{display:flex;align-items:center;gap:8px;min-height:64px;padding:8px 12px 8px 16px}
+.set-row + .set-row{border-top:1px solid var(--line)}
+.set-row.off .nm{color:var(--text-3)}
+.set-main{flex:1;min-width:0;display:grid;gap:2px;text-align:left;padding:4px 0;min-height:48px;align-content:center}
+button.set-main:active{opacity:.6}
+.set-main .nm{font-size:18px;font-weight:600;overflow-wrap:anywhere}
+.set-main .meta{font-size:14px;color:var(--text-2);line-height:1.5}
+.tag-off{display:inline-block;margin-left:8px;padding:0 8px;border-radius:6px;background:var(--surface-3);color:var(--text-2);font-size:13px;font-weight:600;vertical-align:2px}
+.chev{color:var(--line-strong)}
+.data-sec{display:grid;gap:12px;padding:20px;background:var(--surface);border:1px solid var(--line);border-radius:16px}
+.data-sec h2{font-size:18px}
+.data-sec .row{display:flex;flex-wrap:wrap;gap:12px}
+.fld{display:grid;gap:8px}
+.lbl{font-size:15px;font-weight:600;color:var(--text-2)}
+.txt{width:100%;min-height:52px;padding:12px 16px;border:1.5px solid var(--line-strong);border-radius:12px;background:var(--surface);font-size:18px}
+.txt:focus{outline:2px solid var(--brand);outline-offset:1px}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opt{min-height:48px;padding:0 16px;border-radius:10px;border:1.5px solid var(--line-strong);background:var(--surface);font-size:17px;font-weight:600}
+.opt:active{background:var(--surface-2)}
+.opt[aria-pressed="true"]{background:var(--brand);border-color:var(--brand);color:#fff}
+.fixed{min-height:48px;display:flex;align-items:center;color:var(--text-2)}
+.req-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+.req-row .txt{width:120px;text-align:center;font-size:20px;font-weight:600}
+.step.sm{min-height:52px;width:64px;font-size:18px}
+.err{color:var(--danger);font-size:15px;font-weight:600}
+.switch{display:flex;align-items:center;gap:12px;min-height:52px;font-weight:600}
+.switch input{width:28px;height:28px;accent-color:var(--brand);margin:0}
+.sub-h{font-size:16px;font-weight:700;color:var(--text-2);margin:8px 0 4px}
+.manual{width:100%;min-height:40vh;padding:16px;border:1.5px solid var(--line-strong);border-radius:12px;font-size:16px;line-height:1.6;resize:none;margin-top:12px}
+.date-pick{display:flex;align-items:center;justify-content:center;gap:16px;margin-top:16px}
+.date-pick .icon-btn{width:64px;height:64px;background:var(--surface-2)}
+.dp-val{min-width:220px;text-align:center;font-size:22px;font-weight:700}
+
+/* toast & warn */
+.toast{position:fixed;left:50%;bottom:calc(var(--foot-h) + 16px + var(--sa-b));transform:translateX(-50%);z-index:200;width:max-content;max-width:min(600px,calc(100% - 32px));display:flex;align-items:center;gap:12px;padding:16px 20px;border-radius:12px;background:#2F2825;color:#fff;font-size:17px;line-height:1.5;box-shadow:0 4px 16px rgba(0,0,0,.18);animation:fade .15s ease-out;pointer-events:none}
+.toast svg{color:#9FE0B8}
+.st-warn{position:fixed;top:0;left:0;right:0;z-index:300;padding:calc(8px + var(--sa-t)) var(--gut-r) 8px var(--gut-l);background:var(--danger);color:#fff;font-size:15px;font-weight:600;text-align:center}
+@media (prefers-reduced-motion:reduce){*{animation:none !important;transition:none !important}}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
+  <symbol id="i-left" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
+  <symbol id="i-right" viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M21 5H9l-6 7 6 7h12a1 1 0 0 0 1-1V6a1 1 0 0 0-1-1z"/><path d="M17 9l-6 6M11 9l6 6"/></symbol>
+  <symbol id="i-cal" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M16 3v4M8 3v4M3 10h18"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></symbol>
+  <symbol id="i-up" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2"/></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
+</svg>
+
+<div id="st-warn" class="st-warn" hidden>このブラウザでは入力内容を保存できません。プライベートブラウズをオフにしてから開き直してください。</div>
+
+<div id="scr-start" class="screen" hidden></div>
+
+<div id="scr-main" class="screen" hidden>
+  <div class="main-top" id="main-top">
+    <div class="hdr">
+      <button class="date-btn" data-act="date" aria-label="在庫確認の日付を変更"><svg class="i"><use href="#i-cal"/></svg><span id="h-date"></span></button>
+      <div class="prog" id="h-prog"></div>
+      <div class="seg" id="v-seg" role="group" aria-label="表示方法"></div>
+      <button class="buy-chip" id="h-buy" data-act="filter" data-f="buy"></button>
+      <button class="icon-btn" data-act="settings" aria-label="設定"><svg class="i"><use href="#i-gear"/></svg></button>
+    </div>
+    <div class="tools">
+      <div class="chips" id="f-chips" role="group" aria-label="絞り込み"></div>
+    </div>
+    <div class="locjump" id="locjump" hidden></div>
+  </div>
+  <div class="list" id="list"></div>
+  <div class="action-bar" id="main-foot">
+    <button class="btn grow" id="b-next" data-act="start-next"></button>
+    <button class="btn" id="b-report" data-act="report"></button>
+  </div>
+</div>
+
+<div id="scr-report" class="screen" hidden>
+  <div class="top-wrap">
+    <header class="bar-hdr">
+      <button class="btn ghost" data-act="go-main"><svg class="i"><use href="#i-left"/></svg>入力に戻る</button>
+      <h1>報告の確認</h1><span></span>
+    </header>
+  </div>
+  <div class="rp">
+    <div id="rp-warn"></div>
+    <div id="rp-note"></div>
+    <div class="rp-text" id="rp-text"></div>
+    <div class="rp-end">
+      <h2>LINEへの送信が済んだら</h2>
+      <p class="note">入力した数量と現金の内容を消去して、次回の在庫確認に備えます。商品や保管場所などの設定は残ります。</p>
+      <p class="copied" id="rp-copied" hidden></p>
+      <button class="btn danger-outline" data-act="end">今回の在庫確認を終了する</button>
+    </div>
+  </div>
+  <div class="action-bar">
+    <button class="btn secondary" data-act="copy-buy"><svg class="i"><use href="#i-copy"/></svg>購入必要品のみコピー</button>
+    <button class="btn primary grow" data-act="copy-all"><svg class="i"><use href="#i-copy"/></svg>報告全文をコピー</button>
+  </div>
+</div>
+
+<div id="scr-settings" class="screen" hidden>
+  <div class="top-wrap">
+    <header class="bar-hdr">
+      <button class="btn ghost" data-act="set-back"><svg class="i"><use href="#i-left"/></svg>戻る</button>
+      <h1>設定</h1><span></span>
+    </header>
+    <div class="seg set-tabs" id="set-tabs"></div>
+  </div>
+  <div class="set-body" id="set-body"></div>
+</div>
+
+<div id="ov-input" class="overlay" hidden>
+  <div class="sheet input" id="in-sheet" role="dialog" aria-modal="true" aria-labelledby="in-name"></div>
+</div>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<input type="file" id="rs-file" accept="application/json,.json,text/plain,.txt" hidden>
+
+<script>
+(function () {
+'use strict';
+
+/* ================= 初期データ（在庫管理.pdf / 在庫管理2.pdf より） ================= */
+var APP_ID = 'sweets-zaiko';
+var K_MASTER = 'sweetsZaiko.master.v1';
+var K_SESSION = 'sweetsZaiko.session.v1';
+var K_UI = 'sweetsZaiko.ui.v1';
+var CATS = ['food', 'supply', 'cash'];
+var CAT_LABEL = { food: '食材', supply: '備品', cash: '金庫' };
+
+var FOOD = ['アサイー作り置き','アイス原料','マラサダ冷蔵','マラサダ冷凍','イチゴ','バナナ','キウイ','冷凍マンゴー','冷凍カットイチゴ','冷凍ブルーベリー','コムハニー','フルグラ','チョコグラ','コーンフレーク','オレオ','フチウェファー','クロッフル','イチゴソース','チョコソース','キャラメルソース','アンコ','生クリーム','カスタードクリーム','チョコクリーム','チーズケーキ','チョコケーキ','ハチミツ','砂糖','抹茶粉'];
+var SUPPLY = ['アサイーカップ','アサイー蓋','アサイースプーン','アイスカップ','アイススプーン','クロッフル皿','クロッフル棒','テイクアウト容器','キッチンペーパー','ウェットテッシュ','ビニール手袋','ゴミ袋'];
+var CASH = [
+  { id: 'cash_10000', name: '一万円札', kind: 'count', value: 10000, memo: '1枚でもあれば崩す' },
+  { id: 'cash_5000', name: '五千円札', kind: 'count', value: 5000, memo: '五千円札・千円札 計1万くらいになったら' },
+  { id: 'cash_1000', name: '千円札', kind: 'count', value: 1000, memo: '五千円札・千円札 計1万くらいになったら' },
+  { id: 'cash_500', name: '500円玉', kind: 'count', value: 500, memo: '500円玉・100円玉 計5千円くらいになったら' },
+  { id: 'cash_100', name: '100円玉', kind: 'count', value: 100, memo: '500円玉・100円玉 計5千円くらいになったら' },
+  { id: 'cash_other', name: 'その他 小銭', kind: 'yen', value: 1, memo: '' }
+];
+
+function pad2(n) { return (n < 10 ? '0' : '') + n; }
+function defaultMaster() {
+  var items = [];
+  FOOD.forEach(function (n, i) { items.push({ id: 'f' + pad2(i + 1), name: n, cat: 'food', unit: null, req: null, locs: [], memo: '', active: true }); });
+  SUPPLY.forEach(function (n, i) { items.push({ id: 's' + pad2(i + 1), name: n, cat: 'supply', unit: null, req: null, locs: [], memo: '', active: true }); });
+  CASH.forEach(function (c) { items.push({ id: c.id, name: c.name, cat: 'cash', kind: c.kind, value: c.value, locs: ['l6'], memo: c.memo, active: true }); });
+  return {
+    v: 1,
+    units: [{ id: 'u1', name: '個' }, { id: 'u2', name: '袋' }, { id: 'u3', name: '箱' }, { id: 'u4', name: 'ケース' }, { id: 'u5', name: '枚' }],
+    locs: [{ id: 'l1', name: '店奥' }, { id: 'l2', name: '棚上' }, { id: 'l3', name: '冷蔵庫内' }, { id: 'l4', name: '冷蔵庫上' }, { id: 'l5', name: 'シータ' }, { id: 'l6', name: '金庫' }],
+    items: items
+  };
+}
+
+/* ================= 保存 ================= */
+var storageOK = true;
+function lsGet(k) { try { var s = localStorage.getItem(k); return s ? JSON.parse(s) : null; } catch (e) { return null; } }
+function lsSet(k, v) {
+  try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); return true; }
+  catch (e) { storageOK = false; $('#st-warn').hidden = false; return false; }
+}
+function checkStorage() { try { localStorage.setItem('sweetsZaiko.t', '1'); localStorage.removeItem('sweetsZaiko.t'); return true; } catch (e) { return false; } }
+
+function r2(n) { return Math.round(n * 100) / 100; }
+function isStr(s) { return typeof s === 'string'; }
+function normMaster(m) {
+  if (!m || !Array.isArray(m.units) || !Array.isArray(m.locs) || !Array.isArray(m.items)) return null;
+  var units = m.units.filter(function (u) { return u && isStr(u.id) && isStr(u.name); }).map(function (u) { return { id: u.id, name: u.name }; });
+  var locs = m.locs.filter(function (l) { return l && isStr(l.id) && isStr(l.name); }).map(function (l) { return { id: l.id, name: l.name }; });
+  var uid = {}, lid = {}, seen = {};
+  units.forEach(function (u) { uid[u.id] = 1; });
+  locs.forEach(function (l) { lid[l.id] = 1; });
+  var items = [];
+  m.items.forEach(function (it) {
+    if (!it || !isStr(it.id) || !isStr(it.name) || CATS.indexOf(it.cat) < 0 || seen[it.id]) return;
+    seen[it.id] = 1;
+    var o = { id: it.id, name: it.name, cat: it.cat, locs: Array.isArray(it.locs) ? it.locs.filter(function (x, i, a) { return lid[x] && a.indexOf(x) === i; }) : [], memo: isStr(it.memo) ? it.memo : '', active: it.active !== false };
+    if (it.cat === 'cash') {
+      o.kind = it.kind === 'yen' ? 'yen' : 'count';
+      o.value = o.kind === 'yen' ? 1 : Number(it.value);
+      if (o.kind === 'count' && !(o.value > 0)) return;
+    } else {
+      o.unit = uid[it.unit] ? it.unit : null;
+      o.req = (it.req && isFinite(it.req.q) && Number(it.req.q) >= 0 && uid[it.req.u]) ? { q: r2(Number(it.req.q)), u: it.req.u } : null;
+    }
+    items.push(o);
+  });
+  return { v: 1, units: units, locs: locs, items: items };
+}
+function normSession(s) {
+  if (!s || !isStr(s.date) || !/^\d{4}-\d{2}-\d{2}$/.test(s.date) || !s.entries || typeof s.entries !== 'object') return null;
+  return { date: s.date, startedAt: s.startedAt || null, entries: s.entries, copiedAt: s.copiedAt || null, ack: s.ack || null };
+}
+
+var M = normMaster(lsGet(K_MASTER)) || defaultMaster();
+var S = normSession(lsGet(K_SESSION));
+var UI = Object.assign({ filter: 'all', view: 'list', setTab: 'items' }, lsGet(K_UI) || {});
+var screen = null, prevScreen = 'start', mainScrollY = 0, inp = null, reorder = false;
+var layers = [];
+
+function saveMaster() { lsSet(K_MASTER, M); }
+function saveSession() { if (S) lsSet(K_SESSION, S); }
+function saveUI() { lsSet(K_UI, { filter: UI.filter, view: UI.view, setTab: UI.setTab }); }
+
+/* ================= 小道具 ================= */
+function $(s, r) { return (r || document).querySelector(s); }
+function esc(s) { return String(s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function ico(id, cls) { return '<svg class="i' + (cls ? ' ' + cls : '') + '" aria-hidden="true"><use href="#i-' + id + '"/></svg>'; }
+function fmtN(n) { return String(r2(n)); }
+function yen(n) { return Math.round(n).toLocaleString('ja-JP'); }
+function todayStr() { var d = new Date(); return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+function parseDate(s) { var p = s.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); }
+function dateToStr(d) { return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()); }
+function wd(s) { return '日月火水木金土'.charAt(parseDate(s).getDay()); }
+function fmtDate(s, week) { var p = s.split('-').map(Number); return p[0] + '年' + p[1] + '月' + p[2] + '日' + (week ? '（' + wd(s) + '）' : ''); }
+function fmtDateShort(s) { var p = s.split('-').map(Number); return p[1] + '月' + p[2] + '日（' + wd(s) + '）'; }
+function hhmm(t) { var d = new Date(t); return d.getHours() + ':' + pad2(d.getMinutes()); }
+
+function unitById(id) { for (var i = 0; i < M.units.length; i++) if (M.units[i].id === id) return M.units[i]; return null; }
+function uName(id) { var u = unitById(id); return u ? u.name : ''; }
+function locById(id) { for (var i = 0; i < M.locs.length; i++) if (M.locs[i].id === id) return M.locs[i]; return null; }
+function lName(id) { if (id === '_') return '保管場所 未設定'; var l = locById(id); return l ? l.name : ''; }
+function itemById(id) { for (var i = 0; i < M.items.length; i++) if (M.items[i].id === id) return M.items[i]; return null; }
+function activeItems() { return M.items.filter(function (i) { return i.active; }); }
+function unitOrder(u) { for (var i = 0; i < M.units.length; i++) if (M.units[i].id === u) return i; return 999; }
+
+/* ================= 在庫の計算 ================= */
+function keysOf(it) {
+  var ks = (it.locs || []).filter(function (l) { return !!locById(l); });
+  return ks.length ? ks : ['_'];
+}
+function getE(id, k) { return (S && S.entries[id] && S.entries[id][k]) || null; }
+function setE(id, k, e) { if (!S.entries[id]) S.entries[id] = {}; S.entries[id][k] = e; saveSession(); }
+function delE(id, k) { if (S.entries[id]) delete S.entries[id][k]; saveSession(); }
+/* 保管場所の設定を変えたとき、入力済みの数量が宙に浮かないよう、空いている場所へ移す */
+function migrateEntries(it) {
+  if (!S || !S.entries[it.id]) return;
+  var o = S.entries[it.id], nk = keysOf(it), moved = false;
+  Object.keys(o).forEach(function (k) {
+    if (nk.indexOf(k) >= 0 || !o[k]) return;
+    var free = nk.filter(function (x) { return !o[x]; })[0];
+    if (free) { o[free] = o[k]; delete o[k]; moved = true; }
+  });
+  if (moved) saveSession();
+}
+function hasEntries(s) {
+  if (!s) return false;
+  return Object.keys(s.entries).some(function (id) { var o = s.entries[id]; return o && Object.keys(o).length > 0; });
+}
+
+/* 1項目の状態。ov = {k, e} で入力中の値を仮に当てはめて計算する */
+function calc(it, ov) {
+  var ks = keysOf(it);
+  var es = ks.map(function (k) { return ov && ov.k === k ? ov.e : getE(it.id, k); });
+  var done = es.filter(Boolean).length;
+  var r = { ks: ks, es: es, n: ks.length, done: done, complete: done === ks.length };
+  if (it.cat === 'cash') {
+    r.count = 0; r.amount = 0;
+    es.forEach(function (e) { if (e) { r.count += e.q; r.amount += it.kind === 'yen' ? e.q : e.q * it.value; } });
+    r.st = r.complete ? 'done' : (done ? 'partial' : 'todo');
+    return r;
+  }
+  var sums = {}, zeroUnit = null;
+  es.forEach(function (e) {
+    if (!e) return;
+    if (e.q > 0) { var u = e.u || ''; sums[u] = r2((sums[u] || 0) + e.q); }
+    else if (e.u && !zeroUnit) zeroUnit = e.u;
+  });
+  r.sums = sums; r.zeroUnit = zeroUnit; r.need = null; r.ns = 'none';
+  if (it.req) {
+    if (!r.complete) r.ns = 'pending';
+    else {
+      var us = Object.keys(sums);
+      if (us.length === 0) r.need = r2(it.req.q);                       // 在庫0は単位に関係なく0
+      else if (us.length === 1 && us[0] === it.req.u) r.need = r2(Math.max(it.req.q - sums[us[0]], 0));
+      else r.ns = 'mismatch';                                            // 単位が違う → 計算しない
+      if (r.ns !== 'mismatch') r.ns = r.need > 0 ? 'short' : 'ok';
+    }
+  }
+  r.st = !r.complete ? (done ? 'partial' : 'todo') : (r.ns === 'short' ? 'short' : r.ns === 'mismatch' ? 'mismatch' : 'done');
+  return r;
+}
+function entryText(it, e) {
+  if (!e) return '未入力';
+  if (it.cat === 'cash') return it.kind === 'yen' ? yen(e.q) + '円' : e.q + '枚';
+  return fmtN(e.q) + uName(e.u);
+}
+function totalText(it, r) {
+  if (it.cat === 'cash') return it.kind === 'yen' ? yen(r.amount) + '円' : r.count + '枚';
+  var us = Object.keys(r.sums).sort(function (a, b) { return unitOrder(a) - unitOrder(b); });
+  if (!us.length) return '0' + (r.zeroUnit ? uName(r.zeroUnit) : '');
+  return us.map(function (u) { return fmtN(r.sums[u]) + uName(u); }).join('＋');
+}
+function stats() {
+  var s = { total: 0, done: 0, short: 0, mism: 0, cash: 0, cats: { food: [0, 0], supply: [0, 0], cash: [0, 0] } };
+  activeItems().forEach(function (it) {
+    var r = calc(it);
+    s.total++; s.cats[it.cat][1]++;
+    if (r.complete) { s.done++; s.cats[it.cat][0]++; }
+    if (r.st === 'short') s.short++;
+    if (r.st === 'mismatch') s.mism++;
+    if (it.cat === 'cash') s.cash += r.amount;
+  });
+  return s;
+}
+function unconfirmed() { return activeItems().filter(function (it) { return !calc(it).complete; }); }
+
+/* ================= 報告テキスト ================= */
+function reportQty(it) {
+  var r = calc(it);
+  if (r.done === 0) return '未確認';
+  var parts = r.n > 1 ? '（' + r.ks.map(function (k, i) { return lName(k) + ' ' + (r.es[i] ? entryText(it, r.es[i]) : '未確認'); }).join('、') + '）' : '';
+  if (!r.complete) return '未確認' + parts;
+  return totalText(it, r) + parts;
+}
+function buyLines() {
+  var out = [];
+  ['food', 'supply'].forEach(function (c) {
+    activeItems().forEach(function (it) {
+      if (it.cat !== c) return;
+      var r = calc(it);
+      if (r.st === 'short') out.push(it.name + '：' + fmtN(r.need) + uName(it.req.u));
+      else if (r.st === 'mismatch') out.push(it.name + '：単位の確認が必要（在庫 ' + totalText(it, r) + '／必要在庫 ' + fmtN(it.req.q) + uName(it.req.u) + '）');
+    });
+  });
+  return out;
+}
+function buildReport() {
+  var L = [], st = stats(), act = activeItems();
+  L.push('【締め作業・在庫報告】');
+  L.push(fmtDate(S.date));
+  L.push('');
+  ['food', 'supply'].forEach(function (c) {
+    var its = act.filter(function (i) { return i.cat === c; });
+    if (!its.length) return;
+    L.push('■' + CAT_LABEL[c]);
+    its.forEach(function (it) { L.push(it.name + '：' + reportQty(it)); });
+    L.push('');
+  });
+  L.push('■購入必要品');
+  var b = buyLines();
+  if (b.length) b.forEach(function (x) { L.push(x); }); else L.push('購入必要品なし');
+  L.push('');
+  var cash = act.filter(function (i) { return i.cat === 'cash'; });
+  if (cash.length) {
+    L.push('■金庫内現金');
+    cash.forEach(function (it) { L.push(it.name + '：' + reportQty(it)); });
+    L.push('');
+    var allDone = cash.every(function (it) { return calc(it).complete; });
+    L.push('合計：' + yen(st.cash) + '円' + (allDone ? '' : '（未確認の項目を除く）'));
+    L.push('');
+  }
+  L.push('■確認状況');
+  L.push(st.total + '項目中' + st.done + '項目確認済み');
+  var un = unconfirmed();
+  if (un.length) L.push('未確認：' + un.map(function (i) { return i.name; }).join('、'));
+  L.push('');
+  L.push('以上');
+  return L.join('\n');
+}
+function buildBuyText() {
+  var b = buyLines();
+  return '【購入必要品】' + fmtDate(S.date) + '\n' + (b.length ? b.join('\n') : '購入必要品なし');
+}
+
+/* ================= 画面の切り替え ================= */
+function show(name) {
+  if (screen === 'main') mainScrollY = window.scrollY;
+  if (name === 'settings' && screen !== 'settings') prevScreen = screen || 'start';
+  screen = name;
+  ['start', 'main', 'report', 'settings'].forEach(function (s) { $('#scr-' + s).hidden = s !== name; });
+  if (name === 'start') renderStart();
+  else if (name === 'main') renderMain();
+  else if (name === 'report') renderReport();
+  else renderSettings();
+  window.scrollTo(0, name === 'main' ? mainScrollY : 0);
+}
+function route() {
+  var today = todayStr();
+  if (!S) return show('start');
+  if (S.date !== today && S.ack !== today) {
+    if (hasEntries(S)) return show('start');
+    S.date = today; saveSession();
+  }
+  show('main');
+}
+
+/* ================= 開始画面 ================= */
+function renderStart() {
+  var today = todayStr();
+  var h = '<div class="start"><div class="start-in"><h1>在庫確認</h1><p class="today">' + fmtDate(today, true) + '</p>';
+  if (S && hasEntries(S) && S.date !== today) {
+    var st = stats();
+    h += '<div class="resume"><p><b>' + fmtDate(S.date, true) + '</b>の在庫確認が途中のままです（' + st.done + ' / ' + st.total + '項目 入力済み）。</p>' +
+      '<button class="btn primary big" data-act="resume">続きから入力する</button>' +
+      '<button class="btn secondary" data-act="new-start">新しく開始する</button></div>';
+  } else if (S && S.date === today) {
+    h += '<button class="btn primary big" data-act="resume">在庫確認を再開</button>';
+  } else {
+    h += '<button class="btn primary big" data-act="begin">在庫確認を開始</button>';
+  }
+  h += '<button class="btn ghost" data-act="settings">' + ico('gear') + '設定</button></div></div>';
+  $('#scr-start').innerHTML = h;
+}
+function beginSession() {
+  S = { date: todayStr(), startedAt: Date.now(), entries: {}, copiedAt: null, ack: null };
+  saveSession();
+  UI.filter = 'all'; saveUI();
+  mainScrollY = 0;
+  show('main');
+}
+
+/* ================= メイン画面 ================= */
+var FILTERS = [['all', 'すべて'], ['food', '食材'], ['supply', '備品'], ['cash', '金庫'], ['todo', '未入力'], ['buy', '購入必要']];
+function catOk(it, f) { return (f === 'food' || f === 'supply' || f === 'cash') ? it.cat === f : true; }
+function itemPass(it, r, f) {
+  if (f === 'todo') return !r.complete;
+  if (f === 'buy') return r.st === 'short' || r.st === 'mismatch';
+  return catOk(it, f);
+}
+function stIcon(st) { return (st === 'done' || st === 'short' || st === 'mismatch') ? ico('check') : ''; }
+function cashSub(it, r) {
+  if (it.kind === 'yen') return '金額（円）で入力';
+  return r.done ? '= ' + yen(r.amount) + '円' : yen(it.value) + '円 × 枚数';
+}
+function cardHTML(it, r, lk) {
+  var st, qty, sub;
+  if (lk) {
+    var e = getE(it.id, lk);
+    st = !e ? 'todo' : (r.complete ? r.st : 'done');
+    qty = e ? entryText(it, e) : '';
+    if (r.n > 1) sub = 'ほかの場所：' + r.ks.filter(function (k) { return k !== lk; }).map(function (k) { var ee = getE(it.id, k); return lName(k) + ' ' + (ee ? entryText(it, ee) : '未入力'); }).join('・');
+    else sub = it.cat === 'cash' ? cashSub(it, r) : CAT_LABEL[it.cat];
+  } else {
+    st = r.st;
+    qty = r.done ? totalText(it, r) : '';
+    if (r.n > 1) sub = r.ks.map(function (k, i) { return lName(k) + ' ' + (r.es[i] ? entryText(it, r.es[i]) : '未入力'); }).join('・');
+    else sub = it.cat === 'cash' ? cashSub(it, r) : lName(r.ks[0]);
+  }
+  var lbl = { todo: '未入力', partial: '一部入力 ' + r.done + '/' + r.n, done: '入力済', short: '入力済', mismatch: '入力済' }[st];
+  var need = '';
+  if (st === 'short') need = '<span class="c-need">不足・購入 ' + esc(fmtN(r.need) + uName(it.req.u)) + '</span>';
+  else if (st === 'mismatch') need = '<span class="c-need mis">単位の確認が必要</span>';
+  return '<button class="card st-' + st + (need ? ' has-need' : '') + '" data-act="open" data-id="' + esc(it.id) + '"' + (lk ? ' data-k="' + esc(lk) + '"' : '') + ' id="card-' + esc(it.id) + (lk ? '-' + esc(lk) : '') + '">' +
+    '<span class="c-ic">' + stIcon(st) + '</span>' +
+    '<span class="c-name">' + esc(it.name) + '</span>' +
+    '<span class="c-qty num">' + (qty ? esc(qty) : '<span class="dash">—</span>') + '</span>' +
+    '<span class="c-sub">' + esc(sub) + '</span>' +
+    '<span class="c-st">' + lbl + '</span>' + need + '</button>';
+}
+function renderMain() {
+  if (!S || screen !== 'main') return;
+  var st = stats(), f = UI.filter, act = activeItems();
+  $('#h-date').textContent = fmtDateShort(S.date);
+  $('#h-prog').innerHTML = '<div class="prog-txt"><span>入力済み</span><b class="num">' + st.done + '</b><span class="num">/ ' + st.total + '</span></div>' +
+    '<div class="bar" role="progressbar" aria-label="入力の進み具合" aria-valuemin="0" aria-valuemax="' + st.total + '" aria-valuenow="' + st.done + '"><i style="transform:scaleX(' + (st.total ? st.done / st.total : 0) + ')"></i></div>';
+  var hb = $('#h-buy');
+  hb.className = 'buy-chip' + (st.short ? ' on' : '');
+  hb.setAttribute('aria-pressed', f === 'buy');
+  hb.innerHTML = '購入必要 <b class="num">' + st.short + '</b>' + (st.mism ? '<span class="mis">単位確認 ' + st.mism + '</span>' : '');
+  var counts = { all: st.total, food: st.cats.food[1], supply: st.cats.supply[1], cash: st.cats.cash[1], todo: st.total - st.done, buy: st.short + st.mism };
+  $('#f-chips').innerHTML = FILTERS.map(function (x) {
+    return '<button class="chip" data-act="filter" data-f="' + x[0] + '" aria-pressed="' + (f === x[0]) + '">' + x[1] + '<span class="c">' + counts[x[0]] + '</span></button>';
+  }).join('');
+  $('#v-seg').innerHTML = '<button data-act="view" data-v="list" aria-pressed="' + (UI.view === 'list') + '">一覧</button><button data-act="view" data-v="loc" aria-pressed="' + (UI.view === 'loc') + '">保管場所別</button>';
+
+  var h = '', jump = '';
+  if (UI.view === 'loc') {
+    var order = M.locs.map(function (l) { return { id: l.id, name: l.name }; }).concat([{ id: '_', name: '保管場所 未設定' }]);
+    order.forEach(function (L) {
+      var ents = [], d = 0, n = 0;
+      act.forEach(function (it) {
+        if (keysOf(it).indexOf(L.id) < 0) return;
+        var e = getE(it.id, L.id), r = calc(it);
+        n++; if (e) d++;
+        var pass = catOk(it, f);
+        if (f === 'todo') pass = !e;
+        if (f === 'buy') pass = r.st === 'short' || r.st === 'mismatch';
+        if (pass) ents.push([it, r]);
+      });
+      if (!ents.length) return;
+      jump += '<button class="chip" data-act="jump" data-l="' + esc(L.id) + '" aria-label="' + esc(L.name) + 'へ移動">' + ico('pin') + esc(L.name) + '<span class="c">' + d + '/' + n + '</span></button>';
+      h += '<section class="sec" id="sec-' + esc(L.id) + '"><h2 class="sec-h">' + esc(L.name) + '<span class="cnt num">' + d + ' / ' + n + '</span></h2><div class="grid">' +
+        ents.map(function (x) { return cardHTML(x[0], x[1], L.id); }).join('') + '</div></section>';
+    });
+  } else {
+    CATS.forEach(function (c) {
+      var its = act.filter(function (i) { return i.cat === c; }).map(function (i) { return [i, calc(i)]; }).filter(function (x) { return itemPass(x[0], x[1], f); });
+      if (!its.length) return;
+      var dn = st.cats[c];
+      var tot = c === 'cash' ? '<span class="tot">合計 <b class="num">' + yen(st.cash) + '</b>円' + (dn[0] < dn[1] ? '<small>（未確認あり）</small>' : '') + '</span>' : '';
+      h += '<section class="sec"><h2 class="sec-h">' + CAT_LABEL[c] + '<span class="cnt num">' + dn[0] + ' / ' + dn[1] + '</span>' + tot + '</h2><div class="grid">' +
+        its.map(function (x) { return cardHTML(x[0], x[1], null); }).join('') + '</div></section>';
+    });
+  }
+  if (!h) h = '<p class="empty">' + (f === 'todo' ? '未入力の項目はありません' : f === 'buy' ? '購入が必要な項目はありません' : '表示する項目がありません') + '</p>';
+  $('#list').innerHTML = h;
+  var lj = $('#locjump');
+  lj.hidden = UI.view !== 'loc' || !jump;
+  lj.innerHTML = jump;
+
+  var left = st.total - st.done, bn = $('#b-next'), br = $('#b-report');
+  bn.className = 'btn grow ' + (left ? 'primary' : 'secondary');
+  bn.disabled = !left;
+  bn.innerHTML = left ? '未入力を順に入力<span class="num">（残り ' + left + '）</span>' : '未入力はありません';
+  br.className = 'btn ' + (left ? 'secondary' : 'primary');
+  br.innerHTML = '報告を作成' + ico('right');
+  measureTop();
+}
+function measureTop() {
+  var t = $('#main-top'), f = $('#main-foot');
+  if (t && t.offsetHeight) document.documentElement.style.setProperty('--top-h', t.offsetHeight + 'px');
+  if (f && f.offsetHeight) document.documentElement.style.setProperty('--foot-h', f.offsetHeight + 'px');
+}
+
+/* 「次へ」の順番：今の表示（一覧 / 保管場所別）と、カテゴリの絞り込みに従う */
+function seqFor(view, f) {
+  var act = activeItems().filter(function (i) { return catOk(i, f); }), out = [];
+  if (view === 'loc') {
+    M.locs.map(function (l) { return l.id; }).concat(['_']).forEach(function (lid) {
+      act.forEach(function (it) { if (keysOf(it).indexOf(lid) >= 0) out.push({ id: it.id, k: lid }); });
+    });
+  } else {
+    CATS.forEach(function (c) { act.forEach(function (it) { if (it.cat === c) keysOf(it).forEach(function (k) { out.push({ id: it.id, k: k }); }); }); });
+  }
+  return out;
+}
+function findNext(cur) {
+  var f = ['food', 'supply', 'cash'].indexOf(UI.filter) >= 0 ? UI.filter : 'all';
+  function tryIn(seq) {
+    var n = seq.length; if (!n) return null;
+    var s = -1;
+    if (cur) for (var i = 0; i < n; i++) if (seq[i].id === cur.id && seq[i].k === cur.k) { s = i; break; }
+    for (var j = 1; j <= n; j++) {
+      var x = seq[(s + j + n) % n];
+      if (cur && x.id === cur.id && x.k === cur.k) continue;
+      if (!getE(x.id, x.k)) return x;
+    }
+    return null;
+  }
+  return tryIn(seqFor(UI.view, f)) || (f !== 'all' ? tryIn(seqFor(UI.view, 'all')) : null);
+}
+
+/* ================= 数量入力モーダル ================= */
+function defUnit(it) { return it.cat !== 'cash' && unitById(it.unit) ? it.unit : null; }
+function maxInt(it) { return it.cat === 'cash' ? (it.kind === 'yen' ? 7 : 4) : 5; }
+function openInput(id, k, swap) {
+  var it = itemById(id); if (!it) return;
+  var ks = keysOf(it);
+  if (!k || ks.indexOf(k) < 0) k = ks.filter(function (x) { return !getE(id, x); })[0] || ks[0];
+  var e = getE(id, k);
+  inp = { id: id, k: k, draft: e ? String(e.q) : '', fresh: !!e, unit: e && e.u && unitById(e.u) ? e.u : defUnit(it), err: '', touched: false };
+  $('#ov-input').hidden = false;
+  updateLock();
+  renderInput(swap);
+}
+function renderInput(swap) {
+  var it = itemById(inp.id), ks = keysOf(it), multi = ks.length > 1, e = getE(it.id, inp.k), st = stats();
+  var loc = multi ? '' : '<span class="loc-tag' + (inp.k === '_' ? ' none' : '') + '">' + ico('pin') + esc(lName(inp.k)) + '</span>';
+  var h = '<div class="in-head' + (swap ? ' swap' : '') + '"><div class="in-title">' +
+    '<div class="in-meta">' + loc + '<span>' + CAT_LABEL[it.cat] + '</span><span class="in-remain">未入力 残り <b class="num">' + (st.total - st.done) + '</b></span></div>' +
+    '<h2 class="in-name" id="in-name">' + esc(it.name) + '</h2>' +
+    (it.memo ? '<p class="in-memo">' + esc(it.memo) + '</p>' : '') + '</div>' +
+    (e ? '<button class="btn ghost sm" data-act="in-unset">未入力に戻す</button>' : '') +
+    '<button class="icon-btn" data-act="in-close" aria-label="閉じる">' + ico('close') + '</button></div>';
+  if (multi) {
+    h += '<div class="in-tabs' + (swap ? ' swap' : '') + '">' + ks.map(function (k) {
+      var ee = getE(it.id, k);
+      return '<button class="in-tab' + (ee ? ' done' : '') + '" data-act="in-tab" data-k="' + esc(k) + '" aria-pressed="' + (k === inp.k) + '">' + ico('pin') + esc(lName(k)) + '<span class="q">' + esc(ee ? entryText(it, ee) : '未入力') + '</span></button>';
+    }).join('') + '</div>';
+  }
+  var keys = ['7', '8', '9', 'bs', '4', '5', '6', 'clr', '1', '2', '3', 'none', '0', '.'];
+  var padH = keys.map(function (k) {
+    if (k === 'bs') return '<button class="key fn" data-act="key" data-k="bs" aria-label="1文字削除">' + ico('back') + '</button>';
+    if (k === 'clr') return '<button class="key fn" data-act="key" data-k="clr">クリア</button>';
+    if (k === 'none') return '<button class="key none" data-act="key" data-k="none">在庫なし<span>（0）</span><small>保存して次へ</small></button>';
+    if (k === '.') return '<button class="key" data-act="key" data-k="." aria-label="小数点"' + (it.cat === 'cash' ? ' disabled' : '') + '>.</button>';
+    return '<button class="key' + (k === '0' ? ' zero' : '') + '" data-act="key" data-k="' + k + '">' + k + '</button>';
+  }).join('');
+  h += '<div class="in-body"><div class="in-left">' +
+    '<div class="in-disp' + (swap ? ' swap' : '') + '"><button class="step" data-act="key" data-k="-1" aria-label="1減らす">−1</button><div class="val" id="in-val"></div><button class="step" data-act="key" data-k="+1" aria-label="1増やす">＋1</button></div>' +
+    '<div id="in-units"></div><div class="calc" id="in-calc"></div></div>' +
+    '<div class="pad">' + padH + '</div></div>' +
+    '<div class="in-foot" id="in-foot"></div>';
+  $('#in-sheet').innerHTML = h;
+  updInput();
+}
+function draftQ() { return inp.draft === '' ? null : r2(parseFloat(inp.draft)); }
+function updInput() {
+  var it = itemById(inp.id), d = inp.draft, q = draftQ();
+  var unitLbl = it.cat === 'cash' ? (it.kind === 'yen' ? '円' : '枚') : uName(inp.unit);
+  var val = $('#in-val');
+  if (d === '') val.innerHTML = '<span class="ph">数量を入力</span>';
+  else val.innerHTML = '<span class="v num">' + esc(it.cat === 'cash' && it.kind === 'yen' ? yen(q) : d) + '</span>' + (unitLbl ? '<span class="u">' + esc(unitLbl) + '</span>' : '');
+  val.classList.toggle('fresh', inp.fresh && d !== '');
+
+  var uh = '';
+  if (it.cat !== 'cash') {
+    uh = '<div class="units' + (inp.err === 'unit' ? ' err' : '') + '" role="group" aria-label="単位">' + M.units.map(function (u) {
+      return '<button class="unit" data-act="unit" data-u="' + esc(u.id) + '" aria-pressed="' + (u.id === inp.unit) + '">' + esc(u.name) + '</button>';
+    }).join('') + '</div>';
+    if (inp.err === 'unit') uh += '<p class="u-msg err">単位を選んでください</p>';
+    else if (!defUnit(it)) uh += '<p class="u-msg">選んだ単位は、次回からこの項目で自動的に選ばれます</p>';
+  }
+  $('#in-units').innerHTML = uh;
+
+  var ch = '', draftE = q === null ? null : { q: q, u: it.cat === 'cash' ? null : inp.unit };
+  var r = calc(it, { k: inp.k, e: draftE });
+  if (it.cat === 'cash') {
+    var tot = 0;
+    activeItems().forEach(function (x) { if (x.cat === 'cash') tot += (x.id === it.id ? r : calc(x)).amount; });
+    if (it.kind === 'count') ch += '<span>' + yen(it.value) + '円 × ' + (q === null ? 0 : q) + '枚 ＝ <b>' + yen((q || 0) * it.value) + '円</b></span>';
+    ch += '<span class="muted">金庫の合計 <b>' + yen(tot) + '円</b></span>';
+  } else {
+    if (r.n > 1 && r.done) ch += '<span>全体 <b>' + esc(totalText(it, r)) + '</b>' + (r.complete ? '' : '（入力済みの場所のみ）') + '</span>';
+    if (!it.req) ch += '<span class="muted">必要在庫 未設定</span>';
+    else {
+      ch += '<span>必要在庫 <b>' + esc(fmtN(it.req.q) + uName(it.req.u)) + '</b></span>';
+      if (q !== null && q > 0 && !inp.unit) ch += '<span class="muted">単位を選ぶと購入必要数を計算します</span>';
+      else if (r.ns === 'pending') ch += '<span class="muted">' + (q === null ? '数量を入れると購入必要数を計算します' : 'ほかの場所の入力後に計算します') + '</span>';
+      else if (r.ns === 'short') ch += '<span class="need">購入必要 ' + esc(fmtN(r.need) + uName(it.req.u)) + '</span>';
+      else if (r.ns === 'ok') ch += '<span class="ok">購入不要</span>';
+      else if (r.ns === 'mismatch') ch += '<span class="mis">単位が違うため計算できません（必要在庫の単位は「' + esc(uName(it.req.u)) + '」）</span>';
+    }
+  }
+  $('#in-calc').innerHTML = ch;
+
+  var empty = d === '';
+  $('#in-foot').innerHTML = '<button class="btn secondary" data-act="in-save-close">' + (empty ? '閉じる' : '保存して閉じる') + '</button>' +
+    '<button class="btn primary" data-act="in-save-next">' + (empty ? 'スキップして次へ' : '保存して次へ') + ico('right') + '</button>';
+}
+function pressKey(k) {
+  var it = itemById(inp.id), d = inp.draft;
+  if (/^\d$/.test(k)) {
+    if (inp.fresh) d = '';
+    if (d === '0') d = '';
+    if (d.indexOf('.') >= 0) { if (d.split('.')[1].length >= 2) return; }
+    else if (d.length >= maxInt(it)) return;
+    d += k;
+  } else if (k === '.') {
+    if (it.cat === 'cash') return;
+    if (inp.fresh) d = '';
+    if (d.indexOf('.') >= 0) return;
+    d = (d === '' ? '0' : d) + '.';
+  } else if (k === 'bs') {
+    d = d.slice(0, -1);
+  } else if (k === 'clr') {
+    d = '';
+  } else if (k === '+1' || k === '-1') {
+    var v = parseFloat(d); if (!isFinite(v)) v = 0;
+    v = r2(v + (k === '+1' ? 1 : -1)); if (v < 0) v = 0;
+    if (String(Math.floor(v)).length > maxInt(it)) return;
+    d = String(v);
+  } else if (k === 'none') {
+    inp.draft = '0'; inp.fresh = false; inp.touched = true;
+    if (commit() === 'ok') goNext();
+    return;
+  }
+  inp.draft = d; inp.fresh = false; inp.err = ''; inp.touched = true;
+  updInput();
+}
+/* 戻り値: 'empty'（未入力のまま） / 'err' / 'ok' */
+function commit() {
+  var it = itemById(inp.id);
+  if (inp.draft === '') return 'empty';
+  var q = draftQ();
+  if (!isFinite(q) || q < 0) return 'err';
+  var u = null;
+  if (it.cat !== 'cash') {
+    u = inp.unit && unitById(inp.unit) ? inp.unit : null;
+    if (q > 0 && !u) { inp.err = 'unit'; updInput(); return 'err'; }
+  }
+  setE(it.id, inp.k, { q: q, u: u, t: Date.now() });
+  if (it.cat !== 'cash' && u && !defUnit(it)) { it.unit = u; saveMaster(); }   // 単位未設定の項目は、最初に選んだ単位を既定にする
+  renderMain();
+  return 'ok';
+}
+function goNext() {
+  var cur = { id: inp.id, k: inp.k }, nx = findNext(cur);
+  if (!nx) {
+    var allDone = stats().done === stats().total;
+    closeInput();
+    toast(allDone ? 'すべての項目を入力しました' : 'ほかに未入力の項目はありません', allDone);
+    return;
+  }
+  if (UI.view === 'loc' && nx.k !== cur.k) toast('次の保管場所：' + lName(nx.k));
+  openInput(nx.id, nx.k, true);
+}
+function closeInput() {
+  var last = inp;
+  inp = null;
+  $('#ov-input').hidden = true;
+  $('#in-sheet').innerHTML = '';
+  updateLock();
+  renderMain();
+  if (last) {
+    var el = document.getElementById('card-' + last.id + (UI.view === 'loc' ? '-' + last.k : ''));
+    if (el && el.scrollIntoView) el.scrollIntoView({ block: 'nearest' });
+  }
+}
+function switchTab(k) {
+  if (k === inp.k) return;
+  if (inp.touched && inp.draft !== '') { if (commit() === 'err') return; }
+  openInput(inp.id, k, true);
+}
+
+/* ================= 共通のシート・トースト ================= */
+function updateLock() { document.documentElement.classList.toggle('lock', layers.length > 0 || !!inp); }
+function openLayer(inner, cls, handlers) {
+  var ov = document.createElement('div');
+  ov.className = 'overlay'; ov.style.zIndex = 60 + layers.length;
+  var sh = document.createElement('div');
+  sh.className = 'sheet ' + (cls || ''); sh.setAttribute('role', 'dialog'); sh.setAttribute('aria-modal', 'true');
+  sh.innerHTML = inner; ov.appendChild(sh); document.body.appendChild(ov);
+  var layer = {
+    ov: ov, sh: sh,
+    close: function () { ov.remove(); var i = layers.indexOf(layer); if (i >= 0) layers.splice(i, 1); updateLock(); }
+  };
+  sh.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-a]');
+    if (b && !b.disabled && handlers && handlers[b.dataset.a]) handlers[b.dataset.a](b, e);
+  });
+  layers.push(layer); updateLock();
+  return layer;
+}
+function confirmDialog(o, onOk) {
+  var L = openLayer('<div class="sh-head"><h2>' + esc(o.title) + '</h2></div><div class="cf-body">' + (o.body || '') + '</div>' +
+    '<div class="sh-foot"><button class="btn secondary" data-a="no">' + esc(o.cancel || 'キャンセル') + '</button><button class="btn ' + (o.okKind || 'primary') + '" data-a="yes">' + esc(o.ok || 'OK') + '</button></div>', 'small', {
+    no: function () { L.close(); },
+    yes: function () { L.close(); if (onOk) onOk(); }
+  });
+  return L;
+}
+function askText(title, init, onOk) {
+  var L = openLayer('<div class="sh-head"><h2>' + esc(title) + '</h2></div><input type="text" class="txt" id="ask-in" value="' + esc(init || '') + '" autocomplete="off" enterkeyhint="done" style="margin-top:12px">' +
+    '<p class="err" id="ask-err" hidden style="margin-top:8px"></p><div class="sh-foot"><button class="btn secondary" data-a="cancel">キャンセル</button><button class="btn primary" data-a="ok">保存</button></div>', 'small', {
+    cancel: function () { L.close(); },
+    ok: function () { submit(); }
+  });
+  var input = $('#ask-in', L.sh);
+  function submit() {
+    var err = onOk(input.value.trim());
+    if (err) { var el = $('#ask-err', L.sh); el.textContent = err; el.hidden = false; return; }
+    L.close();
+  }
+  input.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
+  input.focus();
+  return L;
+}
+var toastTimer = null;
+function toast(msg, ok) {
+  var t = $('#toast');
+  t.innerHTML = (ok ? ico('check') : '') + '<span>' + esc(msg) + '</span>';
+  t.hidden = false;
+  t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function () { t.hidden = true; }, 2800);
+}
+
+/* ================= 日付 ================= */
+function openDateSheet() {
+  var L = openLayer('<div class="sh-head"><h2>在庫確認の日付</h2></div><p class="note" style="margin-top:4px">日付をまたいで作業したときなどに変更します。報告の日付に使われます。</p>' +
+    '<div class="date-pick"><button class="icon-btn" data-a="prev" aria-label="前の日">' + ico('left') + '</button><div class="dp-val" id="dp-val"></div><button class="icon-btn" data-a="next" aria-label="次の日">' + ico('right') + '</button></div>' +
+    '<div class="sh-foot"><button class="btn secondary" data-a="today">今日にする</button><button class="btn primary" data-a="close">閉じる</button></div>', 'small', {
+    prev: function () { shift(-1); }, next: function () { shift(1); },
+    today: function () { S.date = todayStr(); upd(); },
+    close: function () { L.close(); }
+  });
+  function shift(n) { var d = parseDate(S.date); d.setDate(d.getDate() + n); var s = dateToStr(d); if (s > todayStr()) return; S.date = s; upd(); }
+  function upd() {
+    saveSession(); renderMain();
+    $('#dp-val', L.sh).textContent = fmtDate(S.date, true);
+    $('[data-a="next"]', L.sh).disabled = S.date >= todayStr();
+  }
+  upd();
+}
+
+/* ================= 報告画面 ================= */
+function renderReport() {
+  var un = unconfirmed();
+  $('#rp-warn').innerHTML = un.length ? '<div class="warn-box"><p><b>未確認の項目が' + un.length + '件あります。</b>報告では「未確認」と表示されます。</p>' +
+    '<p class="names">' + esc(un.slice(0, 15).map(function (i) { return i.name; }).join('、')) + (un.length > 15 ? ' ほか' + (un.length - 15) + '件' : '') + '</p>' +
+    '<button class="btn secondary" data-act="go-todo">未入力の項目を入力する</button></div>' : '';
+  var reqN = activeItems().filter(function (i) { return i.cat !== 'cash' && i.req; }).length;
+  $('#rp-note').innerHTML = reqN ? '' : '<p class="note">必要在庫数が1件も設定されていないため、購入必要品は判定していません。設定の「商品・備品」から登録できます。</p>';
+  $('#rp-text').textContent = buildReport();
+  var c = $('#rp-copied');
+  c.hidden = !S.copiedAt;
+  c.textContent = S.copiedAt ? '報告全文をコピー済み（' + hhmm(S.copiedAt) + '）' : '';
+}
+function onCopy(kind) {
+  var text = kind === 'all' ? buildReport() : buildBuyText();
+  var un = unconfirmed();
+  if (un.length) {
+    confirmDialog({
+      title: '未確認の項目があります',
+      body: '<p>' + un.length + '件が未入力です。' + (kind === 'all' ? '報告では「未確認」と表示されます。' : '未確認の項目は購入判定に含まれていません。') + '</p><span class="names">' + esc(un.slice(0, 10).map(function (i) { return i.name; }).join('、')) + (un.length > 10 ? ' ほか' + (un.length - 10) + '件' : '') + '</span>',
+      ok: 'このままコピー', cancel: '戻る'
+    }, function () { doCopy(text, kind); });
+  } else doCopy(text, kind);
+}
+function doCopy(text, kind) {
+  copyText(text).then(function (ok) {
+    if (ok) {
+      if (kind === 'all') { S.copiedAt = Date.now(); saveSession(); }
+      if (screen === 'report') renderReport();
+      toast(kind === 'all' ? '報告全文をコピーしました。LINEに貼り付けて送信してください' : '購入必要品をコピーしました', true);
+    } else openManualCopy(text, kind);
+  });
+}
+/* Clipboard API → execCommand の順に試す。どちらも失敗したら false */
+function copyText(text) {
+  if (navigator.clipboard && navigator.clipboard.writeText && window.isSecureContext) {
+    return navigator.clipboard.writeText(text).then(function () { return true; }, function () { return legacyCopy(text); });
+  }
+  return Promise.resolve(legacyCopy(text));
+}
+function legacyCopy(text) {
+  var ta = document.createElement('textarea'), ok = false;
+  ta.value = text;
+  ta.setAttribute('readonly', '');
+  ta.style.cssText = 'position:fixed;top:0;left:0;width:1px;height:1px;padding:0;border:0;opacity:0;font-size:16px;';
+  document.body.appendChild(ta);
+  try { ta.select(); ta.setSelectionRange(0, text.length); ok = document.execCommand('copy'); } catch (e) { ok = false; }
+  ta.remove();
+  if (window.getSelection) try { window.getSelection().removeAllRanges(); } catch (e) {}
+  return !!ok;
+}
+function openManualCopy(text, kind) {
+  var L = openLayer('<div class="sh-head"><h2>手動でコピーしてください</h2><button class="icon-btn" data-a="close" aria-label="閉じる">' + ico('close') + '</button></div>' +
+    '<p class="note" style="margin-top:4px">自動ではコピーできませんでした。「全文を選択」を押してから、選択された文字をタップし、表示される「コピー」を選んでください。</p>' +
+    '<textarea class="manual" id="mc-ta" readonly spellcheck="false"></textarea>' +
+    '<div class="sh-foot"><button class="btn secondary" data-a="close">閉じる</button><button class="btn primary" data-a="sel">全文を選択</button></div>', 'form-plain', {
+    close: function () { L.close(); },
+    sel: function () {
+      var ta = $('#mc-ta', L.sh);
+      ta.focus(); ta.select(); ta.setSelectionRange(0, ta.value.length);
+      var ok = false;
+      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+      if (ok) {
+        if (kind === 'all') { S.copiedAt = Date.now(); saveSession(); if (screen === 'report') renderReport(); }
+        toast('コピーしました', true);
+      }
+    }
+  });
+  $('#mc-ta', L.sh).value = text;
+}
+function onEnd() {
+  confirmDialog({
+    title: '在庫確認を終了しますか',
+    body: '<p>今回入力した数量と現金の内容を消去します。商品・保管場所などの設定は残ります。</p>' + (S.copiedAt ? '' : '<p class="warn-t"><b>報告全文はまだコピーされていません。</b></p>'),
+    ok: '終了して入力を消去', okKind: 'danger', cancel: 'キャンセル'
+  }, function () {
+    S = null; lsSet(K_SESSION, null);
+    UI.filter = 'all'; saveUI(); mainScrollY = 0;
+    show('start');
+    toast('入力内容を消去しました', true);
+  });
+}
+
+/* ================= 設定画面 ================= */
+var SET_TABS = [['items', '商品・備品'], ['locs', '保管場所'], ['units', '単位'], ['data', 'バックアップ']];
+function renderSettings() {
+  $('#set-tabs').innerHTML = SET_TABS.map(function (t) { return '<button data-act="set-tab" data-t="' + t[0] + '" aria-pressed="' + (UI.setTab === t[0]) + '">' + t[1] + '</button>'; }).join('');
+  var b = $('#set-body');
+  if (UI.setTab === 'items') b.innerHTML = setItemsHTML();
+  else if (UI.setTab === 'locs') b.innerHTML = setLocsHTML();
+  else if (UI.setTab === 'units') b.innerHTML = setUnitsHTML();
+  else b.innerHTML = setDataHTML();
+}
+function itemMeta(it) {
+  var loc = it.locs.length ? it.locs.map(lName).join('・') : '保管場所 未設定';
+  if (it.cat === 'cash') return esc(loc) + ' ／ ' + (it.kind === 'yen' ? '金額（円）で入力' : yen(it.value) + '円 × 枚数');
+  return esc(loc) + ' ／ 単位 ' + (it.unit ? esc(uName(it.unit)) : '未設定') + ' ／ 必要在庫 ' + (it.req ? esc(fmtN(it.req.q) + uName(it.req.u)) : '未設定');
+}
+function setItemsHTML() {
+  var h = '<div class="set-tools"><button class="btn secondary" data-act="item-add">' + ico('plus') + '項目を追加</button>' +
+    '<button class="btn ' + (reorder ? 'primary' : 'secondary') + '" data-act="reorder">' + (reorder ? '並び替えを終える' : '並び替え') + '</button></div>';
+  CATS.forEach(function (c) {
+    var its = M.items.filter(function (i) { return i.cat === c; });
+    h += '<section class="set-sec"><h2 class="sec-h">' + CAT_LABEL[c] + '<span class="cnt">' + its.length + '項目</span></h2>';
+    if (!its.length) { h += '<p class="note">項目がありません</p></section>'; return; }
+    h += '<ul class="set-list">';
+    its.forEach(function (it, i) {
+      h += '<li class="set-row' + (it.active ? '' : ' off') + '">';
+      if (reorder) {
+        h += '<div class="set-main"><span class="nm">' + esc(it.name) + '</span></div>' +
+          '<button class="icon-btn" data-act="mv" data-id="' + esc(it.id) + '" data-d="-1" aria-label="上へ"' + (i === 0 ? ' disabled' : '') + '>' + ico('up') + '</button>' +
+          '<button class="icon-btn" data-act="mv" data-id="' + esc(it.id) + '" data-d="1" aria-label="下へ"' + (i === its.length - 1 ? ' disabled' : '') + '>' + ico('down') + '</button>';
+      } else {
+        h += '<button class="set-main" data-act="item-edit" data-id="' + esc(it.id) + '"><span class="nm">' + esc(it.name) + (it.active ? '' : '<span class="tag-off">無効</span>') + '</span><span class="meta">' + itemMeta(it) + '</span></button>' + ico('right', 'chev');
+      }
+      h += '</li>';
+    });
+    h += '</ul></section>';
+  });
+  return h;
+}
+function moveIn(arr, obj, d, same) {
+  var list = same ? arr.filter(same) : arr.slice();
+  var p = list.indexOf(obj), t = list[p + d];
+  if (!t) return false;
+  var a = arr.indexOf(obj), b = arr.indexOf(t);
+  arr[a] = t; arr[b] = obj;
+  return true;
+}
+function opt(g, v, label, on) { return '<button type="button" class="opt" data-a="opt" data-g="' + g + '" data-v="' + esc(v) + '" aria-pressed="' + !!on + '">' + esc(label) + '</button>'; }
+function openItemEdit(id) {
+  var isNew = !id;
+  var src = isNew ? { id: 'it' + Date.now().toString(36), name: '', cat: 'food', unit: null, req: null, locs: [], memo: '', active: true } : itemById(id);
+  if (!src) return;
+  var f = JSON.parse(JSON.stringify(src)), cash = f.cat === 'cash';
+  var h = '<div class="sh-head"><h2>' + (isNew ? '項目を追加' : '項目の編集') + '</h2><button class="icon-btn" data-a="cancel" aria-label="閉じる">' + ico('close') + '</button></div><div class="form-body">' +
+    '<label class="fld"><span class="lbl">商品名</span><input type="text" class="txt" id="fe-name" value="' + esc(f.name) + '" autocomplete="off" enterkeyhint="done"></label>' +
+    '<p class="err" id="fe-name-err" hidden>商品名を入力してください</p>';
+  if (cash) h += '<div class="fld"><span class="lbl">カテゴリ</span><p class="fixed">金庫（' + (f.kind === 'yen' ? '金額を円で入力' : yen(f.value) + '円 × 枚数') + '）</p></div>';
+  else h += '<div class="fld"><span class="lbl">カテゴリ</span><div class="opts">' + opt('cat', 'food', '食材', f.cat === 'food') + opt('cat', 'supply', '備品', f.cat === 'supply') + '</div></div>';
+  h += '<div class="fld"><span class="lbl">保管場所（複数選べます）</span><div class="opts">' + (M.locs.length ? M.locs.map(function (l) { return opt('loc', l.id, l.name, f.locs.indexOf(l.id) >= 0); }).join('') : '<span class="note">保管場所が登録されていません</span>') + '</div></div>';
+  if (!cash) {
+    var ru = f.req ? f.req.u : f.unit;
+    h += '<div class="fld"><span class="lbl">単位（数量入力のときに最初から選ばれます）</span><div class="opts">' + opt('unit', '', '未設定', !f.unit) + M.units.map(function (u) { return opt('unit', u.id, u.name, f.unit === u.id); }).join('') + '</div></div>' +
+      '<div class="fld"><span class="lbl">必要在庫数（これを下回ると購入必要になります）</span>' +
+      '<div class="req-row"><button type="button" class="step sm" data-a="req-dec" aria-label="1減らす">−1</button><input type="text" inputmode="decimal" class="txt num" id="fe-req" value="' + (f.req ? esc(fmtN(f.req.q)) : '') + '" placeholder="未設定" autocomplete="off"><button type="button" class="step sm" data-a="req-inc" aria-label="1増やす">＋1</button><button type="button" class="btn ghost" data-a="req-clear">未設定にする</button></div>' +
+      '<div class="opts">' + M.units.map(function (u) { return opt('requ', u.id, u.name, ru === u.id); }).join('') + '</div>' +
+      '<p class="err" id="fe-req-err" hidden></p></div>';
+  }
+  h += '<label class="fld"><span class="lbl">メモ（数量入力の画面に表示されます）</span><input type="text" class="txt" id="fe-memo" value="' + esc(f.memo) + '" autocomplete="off" enterkeyhint="done"></label>' +
+    '<label class="switch"><input type="checkbox" id="fe-active"' + (f.active ? ' checked' : '') + '>在庫確認と報告に表示する</label>' +
+    (isNew ? '' : '<div><button type="button" class="btn danger-outline" data-a="del">' + ico('trash') + 'この項目を削除</button></div>') +
+    '</div><div class="sh-foot"><button class="btn secondary" data-a="cancel">キャンセル</button><button class="btn primary" data-a="save">保存</button></div>';
+
+  var L = openLayer(h, 'form', {
+    cancel: function () { L.close(); },
+    opt: function (b) {
+      var g = b.dataset.g;
+      if (g === 'loc') { b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'); return; }
+      L.sh.querySelectorAll('[data-g="' + g + '"]').forEach(function (x) { x.setAttribute('aria-pressed', x === b); });
+      if (g === 'unit' && b.dataset.v && !L.sh.querySelector('[data-g="requ"][aria-pressed="true"]')) {
+        var t = L.sh.querySelector('[data-g="requ"][data-v="' + b.dataset.v + '"]'); if (t) t.setAttribute('aria-pressed', 'true');
+      }
+    },
+    'req-dec': function () { stepReq(-1); }, 'req-inc': function () { stepReq(1); },
+    'req-clear': function () { $('#fe-req', L.sh).value = ''; },
+    del: function () {
+      confirmDialog({ title: '「' + (src.name || '') + '」を削除しますか', body: '<p>この項目の設定と、今回入力した数量が消えます。一時的に外すだけなら「在庫確認と報告に表示する」をオフにしてください。</p>', ok: '削除', okKind: 'danger' }, function () {
+        M.items.splice(M.items.indexOf(src), 1);
+        if (S && S.entries[src.id]) { delete S.entries[src.id]; saveSession(); }
+        saveMaster(); L.close(); renderSettings(); toast('削除しました', true);
+      });
+    },
+    save: function () {
+      var name = $('#fe-name', L.sh).value.trim();
+      $('#fe-name-err', L.sh).hidden = !!name;
+      if (!name) { $('#fe-name', L.sh).focus(); return; }
+      var pressed = function (g) { var b = L.sh.querySelector('[data-g="' + g + '"][aria-pressed="true"]'); return b ? b.dataset.v : null; };
+      f.name = name;
+      f.memo = $('#fe-memo', L.sh).value.trim();
+      f.active = $('#fe-active', L.sh).checked;
+      f.locs = Array.prototype.map.call(L.sh.querySelectorAll('[data-g="loc"][aria-pressed="true"]'), function (b) { return b.dataset.v; });
+      if (!cash) {
+        f.cat = pressed('cat') || f.cat;
+        f.unit = pressed('unit') || null;
+        var rv = $('#fe-req', L.sh).value.trim().replace(/[０-９．]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); });
+        var re = $('#fe-req-err', L.sh);
+        if (rv === '') f.req = null;
+        else {
+          var q = Number(rv), ru2 = pressed('requ');
+          if (!isFinite(q) || q < 0) { re.textContent = '必要在庫数は0以上の数字で入力してください'; re.hidden = false; return; }
+          if (!ru2) { re.textContent = '必要在庫数の単位を選んでください'; re.hidden = false; return; }
+          f.req = { q: r2(q), u: ru2 };
+        }
+      }
+      if (isNew) {
+        var last = -1; M.items.forEach(function (x, i) { if (x.cat === f.cat) last = i; });
+        M.items.splice(last + 1, 0, f);
+      } else {
+        var idx = M.items.indexOf(src);
+        if (src.cat !== f.cat) {
+          M.items.splice(idx, 1);
+          var l2 = -1; M.items.forEach(function (x, i) { if (x.cat === f.cat) l2 = i; });
+          M.items.splice(l2 + 1, 0, f);
+        } else M.items[idx] = f;
+      }
+      sortLocs(f); saveMaster(); migrateEntries(f); L.close(); renderSettings(); toast(isNew ? '項目を追加しました' : '保存しました', true);
+    }
+  });
+  function stepReq(d) {
+    var el = $('#fe-req', L.sh), v = Number(el.value) || 0;
+    v = Math.max(0, r2(v + d)); el.value = String(v);
+  }
+  if (isNew) $('#fe-name', L.sh).focus();
+}
+function setLocsHTML() {
+  var h = '<p class="note">「項目を選ぶ」で、その場所に置いている商品・備品をまとめて設定できます。保管場所別の表示では、ここでの並び順に表示します。</p><ul class="set-list">';
+  if (!M.locs.length) h += '<li class="set-row"><span class="note">保管場所が登録されていません</span></li>';
+  M.locs.forEach(function (l, i) {
+    var n = M.items.filter(function (it) { return it.locs.indexOf(l.id) >= 0; }).length;
+    h += '<li class="set-row"><div class="set-main"><span class="nm">' + esc(l.name) + '</span><span class="meta">' + n + '項目</span></div>' +
+      '<button class="btn secondary sm" data-act="loc-assign" data-id="' + esc(l.id) + '">項目を選ぶ</button>' +
+      '<button class="btn ghost sm" data-act="loc-rename" data-id="' + esc(l.id) + '">名前を変更</button>' +
+      '<button class="icon-btn" data-act="loc-mv" data-id="' + esc(l.id) + '" data-d="-1" aria-label="上へ"' + (i === 0 ? ' disabled' : '') + '>' + ico('up') + '</button>' +
+      '<button class="icon-btn" data-act="loc-mv" data-id="' + esc(l.id) + '" data-d="1" aria-label="下へ"' + (i === M.locs.length - 1 ? ' disabled' : '') + '>' + ico('down') + '</button>' +
+      '<button class="icon-btn danger" data-act="loc-del" data-id="' + esc(l.id) + '" aria-label="削除">' + ico('trash') + '</button></li>';
+  });
+  return h + '</ul><div><button class="btn secondary" data-act="loc-add">' + ico('plus') + '保管場所を追加</button></div>';
+}
+function sortLocs(it) { it.locs.sort(function (a, b) { return M.locs.indexOf(locById(a)) - M.locs.indexOf(locById(b)); }); }
+function openAssign(lid) {
+  var l = locById(lid); if (!l) return;
+  var body = CATS.map(function (c) {
+    var its = M.items.filter(function (i) { return i.cat === c; });
+    if (!its.length) return '';
+    return '<h3 class="sub-h">' + CAT_LABEL[c] + '</h3><div class="opts">' + its.map(function (it) {
+      return '<button type="button" class="opt" data-a="tog" data-id="' + esc(it.id) + '" aria-pressed="' + (it.locs.indexOf(lid) >= 0) + '">' + esc(it.name) + '</button>';
+    }).join('') + '</div>';
+  }).join('');
+  var L = openLayer('<div class="sh-head"><h2>「' + esc(l.name) + '」にある項目</h2><button class="btn primary sm" data-a="done">完了</button></div><div class="form-body"><p class="note">タップで選択・解除します。同じ項目を複数の場所に置くこともできます。</p>' + body + '</div>', 'form', {
+    tog: function (b) {
+      var it = itemById(b.dataset.id), i = it.locs.indexOf(lid);
+      if (i >= 0) it.locs.splice(i, 1); else { it.locs.push(lid); sortLocs(it); }
+      b.setAttribute('aria-pressed', i < 0);
+      saveMaster(); migrateEntries(it);
+    },
+    done: function () { L.close(); renderSettings(); }
+  });
+}
+function uniqName(list, name, selfId) {
+  if (!name) return '名前を入力してください';
+  if (list.some(function (x) { return x.name === name && x.id !== selfId; })) return '同じ名前がすでにあります';
+  return null;
+}
+function newId(p) { return p + Date.now().toString(36) + Math.floor(Math.random() * 1000); }
+function unitUse(uid) {
+  var n = 0;
+  M.items.forEach(function (it) { if (it.unit === uid || (it.req && it.req.u === uid)) n++; });
+  if (S) Object.keys(S.entries).forEach(function (id) { var o = S.entries[id]; Object.keys(o || {}).forEach(function (k) { if (o[k] && o[k].u === uid) n++; }); });
+  return n;
+}
+function setUnitsHTML() {
+  var h = '<p class="note">数量入力の画面には、ここでの並び順で単位のボタンが表示されます。</p><ul class="set-list">';
+  M.units.forEach(function (u, i) {
+    var n = M.items.filter(function (it) { return it.unit === u.id; }).length;
+    h += '<li class="set-row"><div class="set-main"><span class="nm">' + esc(u.name) + '</span><span class="meta">既定の単位として ' + n + '項目</span></div>' +
+      '<button class="btn ghost sm" data-act="unit-rename" data-id="' + esc(u.id) + '">名前を変更</button>' +
+      '<button class="icon-btn" data-act="unit-mv" data-id="' + esc(u.id) + '" data-d="-1" aria-label="上へ"' + (i === 0 ? ' disabled' : '') + '>' + ico('up') + '</button>' +
+      '<button class="icon-btn" data-act="unit-mv" data-id="' + esc(u.id) + '" data-d="1" aria-label="下へ"' + (i === M.units.length - 1 ? ' disabled' : '') + '>' + ico('down') + '</button>' +
+      '<button class="icon-btn danger" data-act="unit-del" data-id="' + esc(u.id) + '" aria-label="削除">' + ico('trash') + '</button></li>';
+  });
+  return h + '</ul><div><button class="btn secondary" data-act="unit-add">' + ico('plus') + '単位を追加</button></div>';
+}
+function setDataHTML() {
+  var canShare = false;
+  try { canShare = !!(navigator.canShare && window.File && navigator.canShare({ files: [new File(['{}'], 'a.json', { type: 'application/json' })] })); } catch (e) {}
+  return '<section class="data-sec"><h2>バックアップ</h2><p class="note">商品・備品、保管場所、単位、必要在庫数、並び順を保存します。今回入力した数量は含みません。</p>' +
+    '<div class="row"><button class="btn secondary" data-act="bk-file">ファイルに保存</button>' + (canShare ? '<button class="btn secondary" data-act="bk-share">共有メニューで送る</button>' : '') +
+    '<button class="btn secondary" data-act="bk-copy">テキストでコピー</button></div></section>' +
+    '<section class="data-sec"><h2>復元</h2><p class="note">バックアップした設定で、今の設定を置き換えます。</p>' +
+    '<div class="row"><button class="btn secondary" data-act="rs-file">ファイルから復元</button><button class="btn secondary" data-act="rs-text">テキストを貼り付けて復元</button></div></section>' +
+    '<section class="data-sec"><h2>初期状態に戻す</h2><p class="note">設定を、最初に登録されていた47項目の状態に戻します。</p><div class="row"><button class="btn danger-outline" data-act="reset-master">設定を初期状態に戻す</button></div></section>' +
+    '<p class="note">データはこのiPadのブラウザの中にだけ保存されます。Safariの「履歴とWebサイトデータを消去」を行うと消えるため、設定を変えたらバックアップを取ってください。</p>';
+}
+function backupJSON() { return JSON.stringify({ app: APP_ID, kind: 'settings', v: 1, exportedAt: new Date().toISOString(), master: M }, null, 2); }
+function backupName() { return 'zaiko-settings-' + todayStr().replace(/-/g, '') + '.json'; }
+function parseBackup(text) {
+  var o; try { o = JSON.parse(text); } catch (e) { return null; }
+  if (!o || typeof o !== 'object') return null;
+  if (o.app && o.app !== APP_ID) return null;
+  return normMaster(o.master || o);
+}
+function applyRestore(m) {
+  confirmDialog({ title: '設定を復元しますか', body: '<p>今の設定を、バックアップの内容（' + m.items.length + '項目）に置き換えます。</p>', ok: '復元する' }, function () {
+    M = m; saveMaster(); M.items.forEach(migrateEntries); renderSettings(); toast('設定を復元しました', true);
+  });
+}
+
+/* ================= 操作の受け付け ================= */
+var ACT = {
+  begin: beginSession,
+  resume: function () { S.ack = todayStr(); saveSession(); show('main'); },
+  'new-start': function () {
+    confirmDialog({ title: '新しく開始しますか', body: '<p>' + fmtDate(S.date, true) + 'に入力した内容を消去して、今日の在庫確認を始めます。</p>', ok: '消去して開始', okKind: 'danger' }, beginSession);
+  },
+  settings: function () { show('settings'); },
+  'set-back': function () { show((prevScreen === 'main' || prevScreen === 'report') && S ? prevScreen : 'start'); },
+  date: openDateSheet,
+  filter: function (b) { UI.filter = (UI.filter === b.dataset.f && b.id === 'h-buy') ? 'all' : b.dataset.f; saveUI(); renderMain(); window.scrollTo(0, 0); },
+  view: function (b) { UI.view = b.dataset.v; saveUI(); renderMain(); window.scrollTo(0, 0); },
+  jump: function (b) { var s = document.getElementById('sec-' + b.dataset.l); if (s) s.scrollIntoView({ behavior: 'smooth', block: 'start' }); },
+  open: function (b) { openInput(b.dataset.id, b.dataset.k || null); },
+  'start-next': function () { var nx = findNext(null); if (nx) openInput(nx.id, nx.k); },
+  report: function () { show('report'); },
+  'go-main': function () { show('main'); },
+  'go-todo': function () { UI.filter = 'todo'; saveUI(); mainScrollY = 0; show('main'); },
+  key: function (b) { if (inp) pressKey(b.dataset.k); },
+  unit: function (b) { if (!inp) return; inp.unit = b.dataset.u; inp.err = ''; inp.touched = true; updInput(); },
+  'in-tab': function (b) { if (inp) switchTab(b.dataset.k); },
+  'in-close': function () { closeInput(); },
+  'in-save-close': function () { if (commit() !== 'err') closeInput(); },
+  'in-save-next': function () { if (commit() !== 'err') goNext(); },
+  'in-unset': function () { delE(inp.id, inp.k); renderMain(); openInput(inp.id, inp.k); },
+  'copy-all': function () { onCopy('all'); },
+  'copy-buy': function () { onCopy('buy'); },
+  end: onEnd,
+  'set-tab': function (b) { UI.setTab = b.dataset.t; saveUI(); reorder = false; renderSettings(); window.scrollTo(0, 0); },
+  'item-add': function () { openItemEdit(null); },
+  'item-edit': function (b) { openItemEdit(b.dataset.id); },
+  reorder: function () { reorder = !reorder; renderSettings(); },
+  mv: function (b) { var it = itemById(b.dataset.id); if (moveIn(M.items, it, Number(b.dataset.d), function (x) { return x.cat === it.cat; })) { saveMaster(); renderSettings(); } },
+  'loc-assign': function (b) { openAssign(b.dataset.id); },
+  'loc-rename': function (b) {
+    var l = locById(b.dataset.id);
+    askText('保管場所の名前', l.name, function (v) { var e = uniqName(M.locs, v, l.id); if (e) return e; l.name = v; saveMaster(); renderSettings(); return null; });
+  },
+  'loc-mv': function (b) { if (moveIn(M.locs, locById(b.dataset.id), Number(b.dataset.d))) { M.items.forEach(sortLocs); saveMaster(); renderSettings(); } },
+  'loc-del': function (b) {
+    var l = locById(b.dataset.id), n = M.items.filter(function (it) { return it.locs.indexOf(l.id) >= 0; }).length;
+    confirmDialog({ title: '「' + l.name + '」を削除しますか', body: '<p>' + (n ? n + '項目の保管場所から「' + esc(l.name) + '」が外れます。今回この場所で入力した数量も使われなくなります。' : 'この場所に設定されている項目はありません。') + '</p>', ok: '削除', okKind: 'danger' }, function () {
+      M.locs.splice(M.locs.indexOf(l), 1);
+      M.items.forEach(function (it) { var i = it.locs.indexOf(l.id); if (i >= 0) it.locs.splice(i, 1); });
+      saveMaster(); M.items.forEach(migrateEntries); renderSettings(); toast('削除しました', true);
+    });
+  },
+  'loc-add': function () { askText('保管場所を追加', '', function (v) { var e = uniqName(M.locs, v); if (e) return e; M.locs.push({ id: newId('l'), name: v }); saveMaster(); renderSettings(); return null; }); },
+  'unit-rename': function (b) {
+    var u = unitById(b.dataset.id);
+    askText('単位の名前', u.name, function (v) { var e = uniqName(M.units, v, u.id); if (e) return e; u.name = v; saveMaster(); renderSettings(); return null; });
+  },
+  'unit-mv': function (b) { if (moveIn(M.units, unitById(b.dataset.id), Number(b.dataset.d))) { saveMaster(); renderSettings(); } },
+  'unit-del': function (b) {
+    var u = unitById(b.dataset.id), n = unitUse(u.id);
+    if (n) { toast('「' + u.name + '」は使われているため削除できません（' + n + '件）'); return; }
+    confirmDialog({ title: '「' + u.name + '」を削除しますか', body: '<p>この単位を使っている項目はありません。</p>', ok: '削除', okKind: 'danger' }, function () {
+      M.units.splice(M.units.indexOf(u), 1); saveMaster(); renderSettings(); toast('削除しました', true);
+    });
+  },
+  'unit-add': function () { askText('単位を追加', '', function (v) { var e = uniqName(M.units, v); if (e) return e; M.units.push({ id: newId('u'), name: v }); saveMaster(); renderSettings(); return null; }); },
+  'bk-file': function () {
+    try {
+      var blob = new Blob([backupJSON()], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a');
+      a.href = url; a.download = backupName(); document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(function () { URL.revokeObjectURL(url); }, 20000);
+      toast('バックアップファイルの保存を開始しました');
+    } catch (e) { toast('ファイルを作成できませんでした。「テキストでコピー」を使ってください'); }
+  },
+  'bk-share': function () {
+    var file = new File([backupJSON()], backupName(), { type: 'application/json' });
+    navigator.share({ files: [file], title: '在庫確認の設定' }).then(function () { toast('共有しました', true); }, function (e) { if (!e || e.name !== 'AbortError') toast('共有できませんでした'); });
+  },
+  'bk-copy': function () {
+    var text = backupJSON();
+    copyText(text).then(function (ok) { if (ok) toast('設定をテキストでコピーしました', true); else openManualCopy(text, 'backup'); });
+  },
+  'rs-file': function () { var f = $('#rs-file'); f.value = ''; f.click(); },
+  'rs-text': function () {
+    var L = openLayer('<div class="sh-head"><h2>テキストを貼り付けて復元</h2><button class="icon-btn" data-a="close" aria-label="閉じる">' + ico('close') + '</button></div>' +
+      '<p class="note" style="margin-top:4px">「テキストでコピー」で保存した内容を貼り付けてください。</p><textarea class="manual" id="rs-ta" spellcheck="false" autocomplete="off"></textarea><p class="err" id="rs-err" hidden style="margin-top:8px">内容を読み取れませんでした。コピーした全文を貼り付けてください。</p>' +
+      '<div class="sh-foot"><button class="btn secondary" data-a="close">キャンセル</button><button class="btn primary" data-a="go">復元</button></div>', '', {
+      close: function () { L.close(); },
+      go: function () { var m = parseBackup($('#rs-ta', L.sh).value); if (!m) { $('#rs-err', L.sh).hidden = false; return; } L.close(); applyRestore(m); }
+    });
+  },
+  'reset-master': function () {
+    confirmDialog({ title: '設定を初期状態に戻しますか', body: '<p>追加した項目、保管場所の割り当て、必要在庫数、単位の変更などがすべて元に戻ります。先にバックアップを取ることをおすすめします。</p>', ok: '初期状態に戻す', okKind: 'danger' }, function () {
+      M = defaultMaster(); saveMaster(); M.items.forEach(migrateEntries); renderSettings(); toast('設定を初期状態に戻しました', true);
+    });
+  }
+};
+document.addEventListener('click', function (e) {
+  var b = e.target.closest('[data-act]');
+  if (!b || b.disabled) return;
+  var f = ACT[b.dataset.act];
+  if (f) f(b, e);
+});
+$('#rs-file').addEventListener('change', function () {
+  var file = this.files && this.files[0]; if (!file) return;
+  var rd = new FileReader();
+  rd.onload = function () { var m = parseBackup(String(rd.result)); if (!m) { toast('バックアップファイルを読み取れませんでした'); return; } applyRestore(m); };
+  rd.onerror = function () { toast('ファイルを読み込めませんでした'); };
+  rd.readAsText(file);
+});
+document.addEventListener('keydown', function (e) {
+  if (!inp || layers.length || e.metaKey || e.ctrlKey || e.altKey) return;
+  var k = e.key;
+  if (/^[0-9]$/.test(k) || k === '.') pressKey(k);
+  else if (k === 'Backspace') pressKey('bs');
+  else if (k === 'Enter') { if (commit() !== 'err') goNext(); }
+  else if (k === 'Escape') closeInput();
+  else return;
+  e.preventDefault();
+});
+document.addEventListener('touchstart', function () {}, { passive: true });   // iOSで:activeを効かせる
+document.addEventListener('visibilitychange', function () {
+  if (document.visibilityState !== 'visible') return;
+  var today = todayStr();
+  if (screen === 'start') { renderStart(); return; }
+  if (screen === 'main' && S && S.date !== today && S.ack !== today && !inp && !layers.length) {
+    if (hasEntries(S)) show('start'); else { S.date = today; saveSession(); renderMain(); }
+  }
+});
+window.addEventListener('resize', measureTop);
+if (window.ResizeObserver) new ResizeObserver(measureTop).observe($('#main-top'));
+
+/* ================= 起動 ================= */
+if (!checkStorage()) { storageOK = false; $('#st-warn').hidden = false; }
+if (!lsGet(K_MASTER)) saveMaster();
+route();
+
+if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('sw.js').then(function () {
+      return navigator.serviceWorker.ready;
+    }).then(function (reg) {
+      if (reg.active) reg.active.postMessage({ type: 'cache', url: location.href.split('#')[0] });
+    }).catch(function () { /* sw.js が無い場合はオフライン対応なしで動く */ });
+  });
+}
+})();
+</script>
+</body>
+</html>
