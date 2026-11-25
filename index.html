@@ -927,9 +927,9 @@ function updInput() {
       return '<button class="unit" data-act="unit" data-u="' + esc(u.id) + '" aria-pressed="' + (u.id === inp.unit) + '">' + esc(u.name) + '</button>';
     }).join('') + '</div>';
     if (inp.err === 'unit') uh += '<p class="u-msg err">単位を選んでください</p>';
-    else if (carry) uh += '<p class="u-msg">前回の数量です。同じならそのまま保存、違えば数字を押して入れ直します</p>';
+    else if (carry) uh += '<p class="u-msg">前回の数量です。同じならそのまま保存できます</p>';
     else if (!defUnit(it)) uh += '<p class="u-msg">選んだ単位は、次回からこの項目で自動的に選ばれます</p>';
-  } else if (carry) uh = '<p class="u-msg">前回の数量です。同じならそのまま保存、違えば数字を押して入れ直します</p>';
+  } else if (carry) uh = '<p class="u-msg">前回の数量です。同じならそのまま保存できます</p>';
   $('#in-units').innerHTML = uh;
 
   var ch = '', draftE = q === null ? null : { q: q, u: it.cat === 'cash' ? null : inp.unit };
