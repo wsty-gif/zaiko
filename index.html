@@ -1205,8 +1205,10 @@ function toast(msg, ok) {
 /* ================= スプレッドシートへの反映 ================= */
 /* 事務所のパソコンから在庫数を見られるよう、Google スプレッドシート（Apps Script のウェブアプリ）へ
    全項目の最新の在庫数をまとめて送る。数量を保存するたびに、数秒待ってから送る（まとめて1回） */
-var SY = Object.assign({ url: '', key: '', lastOk: null, lastErr: '', pending: false, sheet: null }, lsGet(K_SYNC) || {});
-// SY.sheet：項目ごとに「アプリが最後に確かめたシートの在庫数・単位」（sheetKey の文字）。
+var SY = Object.assign({ url: '', key: '', lastOk: null, lastErr: '', pending: false, seen: null }, lsGet(K_SYNC) || {});
+delete SY.sheet;   // 2026/11/26 15時台の版の記録（初めて読んだ値を、取り込まずに覚えていた）は使わない
+// SY.seen：項目ごとに「アプリが最後に確かめたシートの在庫数・単位」（sheetKey の文字）。
+// null は「この仕組みの前の版から更新して、まだシートを読んでいない」。{} は「つないだばかり」。
 // シートの値がこれと違えば、事務所のパソコンで直されたと分かる。書き込むときは base として送り、
 // Apps Script は base と違う（まだ取り込んでいない変更がある）行を書き換えない
 var syncTimer = null, syncBusy = false, syncRev = 0;
@@ -1262,7 +1264,7 @@ function syncItems() {
 }
 function syncPayload() {
   var d = syncItems(), now = Date.now();
-  if (SY.sheet) d.items.forEach(function (it) { if (typeof SY.sheet[it.name] === 'string') it.base = SY.sheet[it.name]; });
+  if (SY.seen) d.items.forEach(function (it) { if (typeof SY.seen[it.name] === 'string') it.base = SY.seen[it.name]; });
   return { app: APP_ID, v: 2, sentAt: new Date(now).toISOString(), sentAtText: fmtStamp(now), dateText: d.newest ? fmtDate(d.newest, true) : '', items: d.items };
 }
 
@@ -1308,12 +1310,16 @@ function putImported(it, v) {
 function importFromSheet(rows) {
   var mine = {}, got = { changed: [], failed: [], dirty: false };
   syncItems().items.forEach(function (r) { mine[r.name] = sheetKey(r.stock, r.unit); });
-  if (!SY.sheet) SY.sheet = {};
+  // 前の版から更新した iPad が初めて読むとき：前の版ではシートに iPad の数を書いていたので、
+  // iPad の数と違う値は事務所で直されたものとして扱う（iPad にまだ送っていない入力があるときは iPad を優先）
+  var upgraded = !SY.seen;
+  if (upgraded) SY.seen = {};
   rows.forEach(function (row) {
     var it = itemByName(String(row.name || ''));
     if (!it || !it.active) return;
-    var cur = sheetKey(row.stock, row.unit), known = SY.sheet[it.name];
-    SY.sheet[it.name] = cur;
+    var cur = sheetKey(row.stock, row.unit), known = SY.seen[it.name];
+    if (known === undefined && upgraded && !SY.pending) known = mine[it.name];
+    SY.seen[it.name] = cur;
     if (known === undefined || cur === known) return;    // 初めて見た行・事務所で直されていない行
     got.dirty = true;                                     // 確認日などを書き直すため、あとで送る
     var local = mine[it.name];
@@ -1382,7 +1388,7 @@ function runSync() {
     .then(function (j) {
       if (!j || !j.ok) throw new Error(j && j.error === 'key' ? '合言葉が違うため、反映できませんでした' : 'スプレッドシートに書き込めませんでした');
       SY.lastOk = Date.now(); SY.lastErr = '';
-      if (SY.sheet && j.written) Object.keys(j.written).forEach(function (n) { SY.sheet[n] = j.written[n]; });
+      if (SY.seen && j.written) Object.keys(j.written).forEach(function (n) { SY.seen[n] = j.written[n]; });
       if (Array.isArray(j.skipped) && j.skipped.length) SY.pending = true;   // 送っている間に事務所で直された → 取り込んでから送り直す
       else if (rev === syncRev) SY.pending = false;
     }, function (e) { throw e; })
@@ -1943,7 +1949,7 @@ var ACT = {
     var url = $('#sy-url').value.trim(), key = $('#sy-key').value.trim();
     if (!/^https?:\/\/\S+$/.test(url)) { toast('URLを確認してください（https:// から始まるURL）'); return; }
     if (!key) { toast('合言葉を入力してください'); return; }
-    SY.url = url.replace(/[?&]key=[^&]*/, ''); SY.key = key; SY.lastErr = ''; SY.sheet = null; saveSync();
+    SY.url = url.replace(/[?&]key=[^&]*/, ''); SY.key = key; SY.lastErr = ''; SY.seen = {}; saveSync();   // つなぎ直したときは、シートの今の値を覚えるだけ（この iPad の数を書き込む）
     renderSettings();
     toast('接続を確かめています…');
     fetch(syncUrl(), { method: 'GET' }).then(function (r) { return r.json(); }).then(function (j) {
