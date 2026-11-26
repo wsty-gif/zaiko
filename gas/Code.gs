@@ -1,15 +1,21 @@
 /**
- * 在庫確認アプリ（iPad）→ このスプレッドシートに在庫数を書き込む Apps Script
+ * 在庫確認アプリ（iPad）→ このスプレッドシートの「在庫管理」シートに在庫数を書き込む Apps Script
  *
  * 1. KEY を好きな合言葉（英数字）に書き換える
  * 2. デプロイ → 新しいデプロイ → 種類「ウェブアプリ」
  *    次のユーザーとして実行：自分 ／ アクセスできるユーザー：全員
  * 3. 表示されたウェブアプリの URL と合言葉を、アプリの「設定 → スプレッドシート」に入れる
  *
- * 書き込むのは「在庫一覧」シートだけです（無ければ作ります）。ほかのシートには触れません。
+ * 「在庫管理」シートの1行目の見出し（商品名・在庫数・発注目安・単位・保管場所）を見て、
+ * 商品名が同じ行の値だけを書き換えます。見出しに「購入必要」「確認日」が無ければ右に足します。
+ * シートに無い商品は下に行を足します。ほかの列・ほかのシートには触れません。
  */
 const KEY = 'ここを合言葉に書き換える';
-const SHEET_NAME = '在庫一覧';
+const SHEET_NAME = '在庫管理';
+const SPREADSHEET_ID = '';   // スプレッドシートから開いた Apps Script なら空のままで OK
+
+const COLS = ['商品名', '在庫数', '発注目安', '単位', '保管場所', '購入必要', '確認日'];
+const FIELDS = { '在庫数': 'stock', '発注目安': 'target', '単位': 'unit', '保管場所': 'loc', '購入必要': 'need', '確認日': 'date' };
 
 function doGet(e) {
   if (!keyOk_(e)) return json_({ ok: false, error: 'key' });
@@ -24,9 +30,7 @@ function doPost(e) {
   } catch (err) {
     return json_({ ok: false, error: 'json' });
   }
-  if (!data || data.app !== 'sweets-zaiko' || !Array.isArray(data.header) || !Array.isArray(data.rows)) {
-    return json_({ ok: false, error: 'format' });
-  }
+  if (!data || data.app !== 'sweets-zaiko' || !Array.isArray(data.items)) return json_({ ok: false, error: 'format' });
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
   try {
@@ -34,38 +38,71 @@ function doPost(e) {
   } finally {
     lock.releaseLock();
   }
-  return json_({ ok: true, rows: data.rows.length });
+  return json_({ ok: true, rows: data.items.length });
 }
 
 function keyOk_(e) {
   return KEY !== 'ここを合言葉に書き換える' && !!e && !!e.parameter && e.parameter.key === KEY;
 }
 
+function book_() {
+  return SPREADSHEET_ID ? SpreadsheetApp.openById(SPREADSHEET_ID) : SpreadsheetApp.getActiveSpreadsheet();
+}
+
+function safe_(v) {
+  // 「=」などで始まる文字が数式として扱われないようにする
+  return typeof v === 'string' && /^[=+\-@]/.test(v) ? "'" + v : (v === null || v === undefined ? '' : v);
+}
+
 function write_(d) {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sh = ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
-  const w = d.header.length;
-  // 列数をそろえ、「=」などで始まる文字は数式として扱われないようにする
-  const rows = d.rows.map(function (r) {
-    const a = r.slice(0, w);
-    while (a.length < w) a.push('');
-    return a.map(function (v) { return typeof v === 'string' && /^[=+\-@]/.test(v) ? "'" + v : v; });
+  const book = book_();
+  const sh = book.getSheetByName(SHEET_NAME) || book.insertSheet(SHEET_NAME);
+
+  // 見出し（1行目）。足りない見出しは右に足す
+  const width = Math.max(sh.getLastColumn(), 1);
+  const header = sh.getRange(1, 1, 1, width).getValues()[0].map(function (h) { return String(h).trim(); });
+  while (header.length && header[header.length - 1] === '') header.pop();
+  COLS.forEach(function (h) {
+    if (header.indexOf(h) < 0) { header.push(h); sh.getRange(1, header.length).setValue(h); }
   });
-  sh.clear();
-  sh.getRange(1, 1, 1, 4).setValues([['最終更新', d.sentAtText || '', '在庫確認の日付', d.dateText || '']]);
-  sh.getRange(3, 1, 1, w).setValues([d.header]).setFontWeight('bold').setBackground('#efe7df');
-  if (rows.length) {
-    sh.getRange(4, 1, rows.length, w).setValues(rows);
-    const f = d.flagCol;
-    const bg = rows.map(function (r) {
-      const v = String(r[f] || '');
-      const c = v.indexOf('購入') === 0 ? '#fff0e3' : v ? '#fff7d6' : '#ffffff';
-      return new Array(w).fill(c);
-    });
-    sh.getRange(4, 1, rows.length, w).setBackgrounds(bg);
-  }
-  sh.setFrozenRows(3);
-  sh.autoResizeColumns(1, w);
+  const col = {};
+  COLS.forEach(function (h) { col[h] = header.indexOf(h) + 1; });
+
+  // 商品名の列から、行の位置を探す（前の名前でも探し、見つかったら今の名前に直す）
+  const lastRow = sh.getLastRow();
+  const names = lastRow >= 2 ? sh.getRange(2, col['商品名'], lastRow - 1, 1).getValues().map(function (r) { return String(r[0]).trim(); }) : [];
+  while (names.length && names[names.length - 1] === '') names.pop();
+  const rowOf = {};
+  let namesChanged = false;
+  d.items.forEach(function (it) {
+    let i = names.indexOf(it.name);
+    if (i < 0) {
+      (it.aliases || []).some(function (a) { const j = names.indexOf(a); if (j >= 0) { i = j; return true; } return false; });
+      if (i >= 0) { names[i] = it.name; namesChanged = true; }
+    }
+    if (i < 0) { names.push(it.name); i = names.length - 1; namesChanged = true; }
+    rowOf[it.name] = i;
+  });
+  const n = names.length;
+  if (!n) return;
+  if (namesChanged) sh.getRange(2, col['商品名'], n, 1).setValues(names.map(function (x) { return [x]; }));
+
+  // 列ごとにまとめて書く（ほかの列の数式などは触らない）
+  Object.keys(FIELDS).forEach(function (h) {
+    const range = sh.getRange(2, col[h], n, 1);
+    const vals = range.getValues();
+    d.items.forEach(function (it) { vals[rowOf[it.name]][0] = safe_(it[FIELDS[h]]); });
+    range.setValues(vals);
+  });
+  // 購入が必要な行の「購入必要」をオレンジにする
+  const needRange = sh.getRange(2, col['購入必要'], n, 1);
+  const bg = needRange.getValues().map(function (r) { return [String(r[0]).indexOf('購入') === 0 ? '#fff0e3' : '#ffffff']; });
+  needRange.setBackgrounds(bg);
+
+  // 最終更新（見出しの右）
+  let at = header.indexOf('最終更新') + 1;
+  if (!at) { at = header.length + 2; sh.getRange(1, at).setValue('最終更新'); }
+  sh.getRange(1, at + 1).setValue(d.sentAtText || '');
 }
 
 function json_(o) {

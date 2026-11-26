@@ -1208,39 +1208,44 @@ function latestOf(it) {
   var ds = es.map(function (e) { return e.d; }).filter(Boolean).sort();
   return { r: calcEntries(it, ks, es), date: ds.length ? ds[ds.length - 1] : null, src: 'prev' };
 }
-var SYNC_HEADER = ['区分', '商品名', '保管場所', '在庫', '単位', '在庫の表示', '発注目安', '購入必要', '確認日', 'メモ'];
-function syncRows() {
-  var rows = [], cashTotal = 0, cashAll = true, newest = null;
+/* スプレッドシートの「在庫管理」シート（商品名・在庫数・発注目安・単位・保管場所…）に合わせて、項目ごとの値を送る。
+   スプレッドシート側は「商品名」で行を探して書き込む。名前を変えた項目は、前の名前（aliases）でも探す */
+var NAME_ALIASES = { f01: ['アサイー作り置き', 'アサイー瓶詰'] };
+function syncItems() {
+  var items = [], cashTotal = 0, cashAll = true, newest = null;
   CATS.forEach(function (c) {
     activeItems().forEach(function (it) {
       if (it.cat !== c) return;
       var L = latestOf(it);
-      var row = [CAT_LABEL[c], it.name, keysOf(it).map(lName).join('・'), '', '', '未確認', it.cat !== 'cash' && it.req ? fmtN(it.req.q) + uName(it.req.u) : '', '', '', it.memo || ''];
+      var row = { name: it.name, aliases: NAME_ALIASES[it.id] || [], cat: CAT_LABEL[c], stock: '未確認', unit: '', target: '', loc: keysOf(it).map(lName).join('・'), need: '', date: '' };
+      if (it.cat !== 'cash') row.target = it.req ? fmtN(it.req.q) + uName(it.req.u) : (/発注目安：当日/.test(it.memo || '') ? '当日' : '');
       if (L) {
         var r = L.r;
-        row[8] = L.date ? fmtSlash(L.date) : '表の記入';
+        row.date = L.date ? fmtSlash(L.date) : '表の記入';
         if (L.date && (!newest || L.date > newest)) newest = L.date;
         if (it.cat === 'cash') {
-          row[3] = it.kind === 'yen' ? r.amount : r.count;
-          row[4] = it.kind === 'yen' ? '円' : '枚';
-          row[5] = it.kind === 'yen' ? yen(r.amount) + '円' : r.count + '枚（' + yen(r.amount) + '円）';
+          row.stock = it.kind === 'yen' ? r.amount : r.count;
+          row.unit = it.kind === 'yen' ? '円' : '枚';
           cashTotal += r.amount;
         } else {
           var us = Object.keys(r.sums);
-          if (us.length <= 1) { row[3] = us.length ? r.sums[us[0]] : 0; row[4] = uName(us[0] || r.zeroUnit || it.unit); }
-          row[5] = totalText(it, r);
-          row[7] = r.st === 'short' ? '購入 ' + fmtN(r.need) + uName(it.req.u) : r.st === 'mismatch' ? '単位の確認が必要' : '';
+          if (us.length <= 1) {
+            var q = us.length ? r.sums[us[0]] : 0;
+            row.unit = uName(us[0] || r.zeroUnit || it.unit);
+            row.stock = it.atLeast && q >= it.atLeast ? it.atLeast + '以上' : q;   // 「6以上」＋単位「袋」
+          } else row.stock = totalText(it, r);                                    // 単位が混ざるときは「4個＋1袋」
+          row.need = r.st === 'short' ? '購入 ' + fmtN(r.need) + uName(it.req.u) : r.st === 'mismatch' ? '単位の確認が必要' : '';
         }
       } else if (it.cat === 'cash') cashAll = false;
-      rows.push(row);
+      items.push(row);
     });
   });
-  rows.push(['金庫', '金庫の合計', '金庫', cashTotal, '円', yen(cashTotal) + '円' + (cashAll ? '' : '（未確認を除く）'), '', '', '', '']);
-  return { rows: rows, newest: newest };
+  items.push({ name: '金庫の合計', aliases: [], cat: '金庫', stock: cashTotal, unit: '円', target: '', loc: '金庫', need: cashAll ? '' : '未確認の項目を除く', date: '' });
+  return { items: items, newest: newest };
 }
 function syncPayload() {
-  var d = syncRows(), now = Date.now();
-  return { app: APP_ID, v: 1, sentAt: new Date(now).toISOString(), sentAtText: fmtStamp(now), dateText: d.newest ? fmtDate(d.newest, true) : '', header: SYNC_HEADER, rows: d.rows, flagCol: 7 };
+  var d = syncItems(), now = Date.now();
+  return { app: APP_ID, v: 2, sentAt: new Date(now).toISOString(), sentAtText: fmtStamp(now), dateText: d.newest ? fmtDate(d.newest, true) : '', items: d.items };
 }
 function queueSync(delay) {
   if (!syncOn()) return;
@@ -1692,7 +1697,7 @@ function setUnitsHTML() {
 }
 function setSyncHTML() {
   return '<section class="data-sec"><h2>スプレッドシートへの反映</h2>' +
-    '<p class="note">在庫数を、事務所のパソコンから見られる Google スプレッドシートに書き込みます。数量を保存するたびに、数秒後に全項目の最新の在庫数をまとめて書き込みます（スプレッドシートの「在庫一覧」シート）。通信できないときは、次に通信できたときに送ります。</p>' +
+    '<p class="note">在庫数を、事務所のパソコンから見られる Google スプレッドシートに書き込みます。数量を保存するたびに、数秒後に全項目の最新の在庫数をまとめて書き込みます（スプレッドシートの「在庫管理」シートの、商品名が同じ行）。通信できないときは、次に通信できたときに送ります。</p>' +
     '<label class="fld"><span class="lbl">送信先のURL（スプレッドシートに設定した Apps Script のウェブアプリのURL）</span><input type="url" class="txt" id="sy-url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec" value="' + esc(SY.url) + '"></label>' +
     '<label class="fld"><span class="lbl">合言葉（Apps Script 側に書いたものと同じ文字）</span><input type="text" class="txt" id="sy-key" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + esc(SY.key) + '"></label>' +
     '<div class="row"><button class="btn primary" data-act="sy-save">保存して接続を確かめる</button>' +
