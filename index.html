@@ -415,32 +415,91 @@ var K_MASTER = 'sweetsZaiko.master.v1';
 var K_SESSION = 'sweetsZaiko.session.v1';
 var K_UI = 'sweetsZaiko.ui.v1';
 var K_PREV = 'sweetsZaiko.prev.v1';
+var K_SEED = 'sweetsZaiko.seed';
 var CATS = ['food', 'supply', 'cash'];
 var CAT_LABEL = { food: '食材', supply: '備品', cash: '金庫' };
 
-var FOOD = ['アサイー作り置き','アイス原料','マラサダ冷蔵','マラサダ冷凍','イチゴ','バナナ','キウイ','冷凍マンゴー','冷凍カットイチゴ','冷凍ブルーベリー','コムハニー','フルグラ','チョコグラ','コーンフレーク','オレオ','フチウェファー','クロッフル','イチゴソース','チョコソース','キャラメルソース','アンコ','生クリーム','カスタードクリーム','チョコクリーム','チーズケーキ','チョコケーキ','ハチミツ','砂糖','抹茶粉'];
-var SUPPLY = ['アサイーカップ','アサイー蓋','アサイースプーン','アイスカップ','アイススプーン','クロッフル皿','クロッフル棒','テイクアウト容器','キッチンペーパー','ウェットテッシュ','ビニール手袋','ゴミ袋'];
+/* 店舗で記入した2枚の表（2026-11-26 受領）を項目ごとにまとめたもの。
+   単位・保管場所・在庫：「場所と単位の認識合わせ」、発注目安・購入先：「発注や作成が必要な数値目安と購入先」
+   [id, 商品名, 単位, 保管場所, 発注目安の数, 発注目安の単位, メモ, 在庫（前回の数量の初期値）, 有効]
+   在庫は、保管場所が1か所で読み取れたものだけを入れる（2か所以上の項目は場所ごとの内訳が分からないため入れない） */
+var SHEET = [
+  ['f01', 'アサイー瓶詰', 'ケース', ['冷蔵庫内', 'シータ'], 1, '箱', '購入先：業者発注（めいらく）', null],
+  ['f02', 'アイス原料', '個', ['冷蔵庫内', 'シータ'], 10, '個', '購入先：業者発注（めいらく）', null],
+  ['f03', 'マラサダ冷蔵', '個', ['冷蔵庫内'], 10, '個', '購入先：業者発注', 4],
+  ['f04', 'マラサダ冷凍', '個', ['冷蔵庫内'], null, null, '購入先：業者発注', 4],
+  ['f05', 'イチゴ', '袋', ['シータ'], 5, '袋', '購入先：業務スーパー', 5],
+  ['f06', 'バナナ', '袋', ['棚上', '冷蔵庫内'], null, null, '発注目安：当日 ／ 購入先：業務スーパー', null],
+  ['f07', 'キウイ', '個', ['冷蔵庫内'], null, null, '発注目安：当日 ／ 購入先：業務スーパー', 1],
+  ['f08', '冷凍マンゴー', '袋', ['シータ'], 5, '袋', '購入先：業務スーパー', 4],
+  ['f09', '冷凍カットイチゴ', '袋', ['シータ'], 5, '袋', '購入先：業務スーパー', 5],
+  ['f10', '冷凍ブルーベリー', '袋', ['シータ'], 5, '袋', '購入先：業務スーパー', 8],
+  ['f11', 'コムハニー', '個', ['店奥'], 2, '個', '購入先：業務スーパー', 1],
+  ['f12', 'フルグラ', '袋', ['棚上'], 3, '袋', '購入先：業務スーパー', 1.5],
+  ['f13', 'チョコグラ', '袋', ['棚上'], 3, '袋', '購入先：業務スーパー', 3.5],
+  ['f14', 'コーンフレーク', '袋', ['棚上'], 3, '袋', '購入先：業務スーパー', 1],
+  ['f15', 'オレオ', '個', ['店奥'], 3, '個', '購入先：業務スーパー', 1],
+  ['f16', 'フチウェファー', '箱', ['棚上'], 1, '箱', '購入先：業者発注', 2],
+  ['f17', 'クロッフル', '袋', ['冷蔵庫内'], null, null, '発注目安：当日 ／ 購入先：カルディ', 2],
+  ['f18', 'イチゴソース', '個', ['店奥'], 3, '個', '購入先：業務スーパー', 2],
+  ['f19', 'チョコソース', '個', ['店奥'], 5, '個', '購入先：業務スーパー', null],
+  ['f20', 'キャラメルソース', '個', ['店奥'], 3, '個', '購入先：業務スーパー', 7],
+  ['f21', 'アンコ', '個', ['冷蔵庫内'], 1, '個', '購入先：スーパー', 0.5],
+  ['f22', '生クリーム', '個', ['冷蔵庫内'], 2, '個', '購入先：業務スーパー', 2.4],
+  ['f23', 'カスタードクリーム', '個', ['冷蔵庫内'], 2, '個', '購入先：業務スーパー', 2.4],
+  ['f24', 'チョコクリーム', '個', ['冷蔵庫内'], 2, '個', '購入先：業務スーパー', 2.5],
+  ['f25', 'チーズケーキ', '個', ['冷蔵庫内'], 1, '個', '購入先：業務スーパー', 1],
+  ['f26', 'チョコケーキ', '個', ['冷蔵庫内'], 1, '個', '購入先：業務スーパー', 1],
+  ['f27', 'ハチミツ', '個', ['店奥'], 5, '個', '購入先：業務スーパー', 6],
+  ['f28', '砂糖', null, [], null, null, '', null, false],          // 2枚とも×印 → 無効（設定から戻せます）
+  ['f29', '抹茶粉', '袋', ['店奥'], 1, '袋', '購入先：業務スーパー', 1],
+  ['s01', 'アサイーカップ', '袋', ['店奥'], 3, '袋', '購入先：業者発注', null],
+  ['s02', 'アサイー蓋', '袋', ['店奥'], 2, '袋', '購入先：業者発注', null],
+  ['s03', 'アサイースプーン', '袋', ['店奥'], 2, '袋', '購入先：業者発注', null],
+  ['s04', 'アイスカップ', '袋', ['店奥'], 3, '袋', '購入先：業者発注', null],
+  ['s05', 'アイススプーン', '袋', ['店奥'], 2, '袋', '購入先：業者発注', null],
+  ['s06', 'クロッフル皿', '袋', ['店奥'], 2, '袋', '購入先：百均', null],
+  ['s07', 'クロッフル棒', '袋', ['店奥'], 2, '袋', '購入先：業者発注', null],
+  ['s08', 'テイクアウト容器', '袋', ['店奥'], 3, '袋', '購入先：業者発注', null],
+  ['s09', 'キッチンペーパー', '個', ['店奥'], 1, '個', '購入先：スーパー', 0],
+  ['s10', 'ウェットテッシュ', '個', ['店奥'], 2, '個', '購入先：スーパー', 5],
+  ['s11', 'ビニール手袋', '個', ['店奥'], 2, '個', '購入先：スーパー', 1],
+  ['s12', 'ゴミ袋', '個', ['店奥'], 1, '個', '購入先：スーパー', 1]
+];
 var CASH = [
-  { id: 'cash_10000', name: '一万円札', kind: 'count', value: 10000, memo: '1枚でもあれば崩す' },
-  { id: 'cash_5000', name: '五千円札', kind: 'count', value: 5000, memo: '五千円札・千円札 計1万くらいになったら' },
-  { id: 'cash_1000', name: '千円札', kind: 'count', value: 1000, memo: '五千円札・千円札 計1万くらいになったら' },
-  { id: 'cash_500', name: '500円玉', kind: 'count', value: 500, memo: '500円玉・100円玉 計5千円くらいになったら' },
-  { id: 'cash_100', name: '100円玉', kind: 'count', value: 100, memo: '500円玉・100円玉 計5千円くらいになったら' },
+  { id: 'cash_10000', name: '一万円札', kind: 'count', value: 10000, memo: '1枚でもあれば両替', old: '1枚でもあれば崩す' },
+  { id: 'cash_5000', name: '五千円札', kind: 'count', value: 5000, memo: '五千円札・千円札 計1万くらいになったら両替', old: '五千円札・千円札 計1万くらいになったら' },
+  { id: 'cash_1000', name: '千円札', kind: 'count', value: 1000, memo: '五千円札・千円札 計1万くらいになったら両替', old: '五千円札・千円札 計1万くらいになったら' },
+  { id: 'cash_500', name: '500円玉', kind: 'count', value: 500, memo: '500円玉・100円玉 計5千円くらいになったら両替', old: '500円玉・100円玉 計5千円くらいになったら' },
+  { id: 'cash_100', name: '100円玉', kind: 'count', value: 100, memo: '500円玉・100円玉 計5千円くらいになったら両替', old: '500円玉・100円玉 計5千円くらいになったら' },
   { id: 'cash_other', name: 'その他 小銭', kind: 'yen', value: 1, memo: '' }
 ];
+var SEED_VER = 2;   // 表の内容を、すでに使っている iPad の設定へ1回だけ反映するための版番号
 
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
-function defaultMaster() {
-  var items = [];
-  FOOD.forEach(function (n, i) { items.push({ id: 'f' + pad2(i + 1), name: n, cat: 'food', unit: null, req: null, locs: [], memo: '', active: true }); });
-  SUPPLY.forEach(function (n, i) { items.push({ id: 's' + pad2(i + 1), name: n, cat: 'supply', unit: null, req: null, locs: [], memo: '', active: true }); });
-  CASH.forEach(function (c) { items.push({ id: c.id, name: c.name, cat: 'cash', kind: c.kind, value: c.value, locs: ['l6'], memo: c.memo, active: true }); });
+function idByName(list, name, prefix) {
+  for (var i = 0; i < list.length; i++) if (list[i].name === name) return list[i].id;
+  var id = newId(prefix); list.push({ id: id, name: name }); return id;
+}
+function sheetItem(m, s) {
   return {
-    v: 1,
-    units: [{ id: 'u1', name: '個' }, { id: 'u2', name: '袋' }, { id: 'u3', name: '箱' }, { id: 'u4', name: 'ケース' }, { id: 'u5', name: '枚' }],
-    locs: [{ id: 'l1', name: '店奥' }, { id: 'l2', name: '棚上' }, { id: 'l3', name: '冷蔵庫内' }, { id: 'l4', name: '冷蔵庫上' }, { id: 'l5', name: 'シータ' }, { id: 'l6', name: '金庫' }],
-    items: items
+    id: s[0], name: s[1], cat: s[0].charAt(0) === 'f' ? 'food' : 'supply',
+    unit: s[2] ? idByName(m.units, s[2], 'u') : null,
+    req: s[4] !== null ? { q: s[4], u: idByName(m.units, s[5], 'u') } : null,
+    locs: s[3].map(function (n) { return idByName(m.locs, n, 'l'); }),
+    memo: s[6], active: s[8] !== false
   };
+}
+function defaultMaster() {
+  var m = {
+    v: 1,
+    units: ['個', '袋', '箱', 'ケース', '枚'].map(function (n, i) { return { id: 'u' + (i + 1), name: n }; }),
+    locs: ['店奥', '棚上', '冷蔵庫内', '冷蔵庫上', 'シータ', '金庫'].map(function (n, i) { return { id: 'l' + (i + 1), name: n }; }),
+    items: []
+  };
+  SHEET.forEach(function (s) { m.items.push(sheetItem(m, s)); });
+  CASH.forEach(function (c) { m.items.push({ id: c.id, name: c.name, cat: 'cash', kind: c.kind, value: c.value, locs: [idByName(m.locs, '金庫', 'l')], memo: c.memo, active: true }); });
+  return m;
 }
 
 /* ================= 保存 ================= */
@@ -651,7 +710,7 @@ function mismatchItems() { return activeItems().filter(function (it) { return it
 function buyLines() {
   return shortItems().map(function (it) {
     var r = calc(it), u = uName(it.req.u);
-    return it.name + '：購入 ' + fmtN(r.need) + u + '（在庫 ' + totalText(it, r) + '／必要 ' + fmtN(it.req.q) + u + '）';
+    return it.name + '：購入 ' + fmtN(r.need) + u + '（在庫 ' + totalText(it, r) + '／目安 ' + fmtN(it.req.q) + u + '）';
   });
 }
 /* LINE報告：購入必要品（必要在庫を下回っているもの）と金庫内現金だけ */
@@ -941,14 +1000,14 @@ function updInput() {
     ch += '<span class="muted">金庫の合計 <b>' + yen(tot) + '円</b></span>';
   } else {
     if (r.n > 1 && r.done) ch += '<span>全体 <b>' + esc(totalText(it, r)) + '</b>' + (r.complete ? '' : '（入力済みの場所のみ）') + '</span>';
-    if (!it.req) ch += '<span class="muted">必要在庫 未設定</span>';
+    if (!it.req) ch += '<span class="muted">発注目安 未設定</span>';
     else {
-      ch += '<span>必要在庫 <b>' + esc(fmtN(it.req.q) + uName(it.req.u)) + '</b></span>';
+      ch += '<span>発注目安 <b>' + esc(fmtN(it.req.q) + uName(it.req.u)) + '</b></span>';
       if (q !== null && q > 0 && !inp.unit) ch += '<span class="muted">単位を選ぶと購入必要数を計算します</span>';
       else if (r.ns === 'pending') ch += '<span class="muted">' + (q === null ? '数量を入れると購入必要数を計算します' : 'ほかの場所の入力後に計算します') + '</span>';
       else if (r.ns === 'short') ch += '<span class="need">購入必要 ' + esc(fmtN(r.need) + uName(it.req.u)) + '</span>';
       else if (r.ns === 'ok') ch += '<span class="ok">購入不要</span>';
-      else if (r.ns === 'mismatch') ch += '<span class="mis">単位が違うため計算できません（必要在庫の単位は「' + esc(uName(it.req.u)) + '」）</span>';
+      else if (r.ns === 'mismatch') ch += '<span class="mis">単位が違うため計算できません（発注目安の単位は「' + esc(uName(it.req.u)) + '」）</span>';
     }
   }
   $('#in-calc').innerHTML = ch;
@@ -1114,7 +1173,7 @@ function renderReport() {
     '<p class="names">' + names(mis, 15) + '</p>' +
     '<button class="btn secondary" data-act="go-buy">確認する</button></div>' : '');
   var reqN = activeItems().filter(function (i) { return i.cat !== 'cash' && i.req; }).length;
-  $('#rp-note').innerHTML = reqN ? '' : '<p class="note">必要在庫数が1件も設定されていないため、購入必要品は判定していません。設定の「商品・備品」から登録できます。</p>';
+  $('#rp-note').innerHTML = reqN ? '' : '<p class="note">発注目安が1件も設定されていないため、購入必要品は判定していません。設定の「商品・備品」から登録できます。</p>';
   $('#rp-text').textContent = buildReport();
   var c = $('#rp-copied');
   c.hidden = !S.copiedAt;
@@ -1204,7 +1263,7 @@ function renderSettings() {
 function itemMeta(it) {
   var loc = it.locs.length ? it.locs.map(lName).join('・') : '保管場所 未設定';
   if (it.cat === 'cash') return esc(loc) + ' ／ ' + (it.kind === 'yen' ? '金額（円）で入力' : yen(it.value) + '円 × 枚数');
-  return esc(loc) + ' ／ 単位 ' + (it.unit ? esc(uName(it.unit)) : '未設定') + ' ／ 必要在庫 ' + (it.req ? esc(fmtN(it.req.q) + uName(it.req.u)) : '未設定');
+  return esc(loc) + ' ／ 単位 ' + (it.unit ? esc(uName(it.unit)) : '未設定') + ' ／ 発注目安 ' + (it.req ? esc(fmtN(it.req.q) + uName(it.req.u)) : '未設定');
 }
 function setItemsHTML() {
   var h = '<div class="set-tools"><button class="btn secondary" data-act="item-add">' + ico('plus') + '項目を追加</button>' +
@@ -1252,7 +1311,7 @@ function openItemEdit(id) {
   if (!cash) {
     var ru = f.req ? f.req.u : f.unit;
     h += '<div class="fld"><span class="lbl">単位（数量入力のときに最初から選ばれます）</span><div class="opts">' + opt('unit', '', '未設定', !f.unit) + M.units.map(function (u) { return opt('unit', u.id, u.name, f.unit === u.id); }).join('') + '</div></div>' +
-      '<div class="fld"><span class="lbl">必要在庫数（これを下回ると購入必要になります）</span>' +
+      '<div class="fld"><span class="lbl">発注目安（在庫がこれを下回ると購入必要になります）</span>' +
       '<div class="req-row"><button type="button" class="step sm" data-a="req-dec" aria-label="1減らす">−1</button><input type="text" inputmode="decimal" class="txt num" id="fe-req" value="' + (f.req ? esc(fmtN(f.req.q)) : '') + '" placeholder="未設定" autocomplete="off"><button type="button" class="step sm" data-a="req-inc" aria-label="1増やす">＋1</button><button type="button" class="btn ghost" data-a="req-clear">未設定にする</button></div>' +
       '<div class="opts">' + M.units.map(function (u) { return opt('requ', u.id, u.name, ru === u.id); }).join('') + '</div>' +
       '<p class="err" id="fe-req-err" hidden></p></div>';
@@ -1299,8 +1358,8 @@ function openItemEdit(id) {
         if (rv === '') f.req = null;
         else {
           var q = Number(rv), ru2 = pressed('requ');
-          if (!isFinite(q) || q < 0) { re.textContent = '必要在庫数は0以上の数字で入力してください'; re.hidden = false; return; }
-          if (!ru2) { re.textContent = '必要在庫数の単位を選んでください'; re.hidden = false; return; }
+          if (!isFinite(q) || q < 0) { re.textContent = '発注目安は0以上の数字で入力してください'; re.hidden = false; return; }
+          if (!ru2) { re.textContent = '発注目安の単位を選んでください'; re.hidden = false; return; }
           f.req = { q: r2(q), u: ru2 };
         }
       }
@@ -1385,12 +1444,12 @@ function setUnitsHTML() {
 function setDataHTML() {
   var canShare = false;
   try { canShare = !!(navigator.canShare && window.File && navigator.canShare({ files: [new File(['{}'], 'a.json', { type: 'application/json' })] })); } catch (e) {}
-  return '<section class="data-sec"><h2>バックアップ</h2><p class="note">商品・備品、保管場所、単位、必要在庫数、並び順を保存します。今回入力した数量は含みません。</p>' +
+  return '<section class="data-sec"><h2>バックアップ</h2><p class="note">商品・備品、保管場所、単位、発注目安、並び順を保存します。今回入力した数量は含みません。</p>' +
     '<div class="row"><button class="btn secondary" data-act="bk-file">ファイルに保存</button>' + (canShare ? '<button class="btn secondary" data-act="bk-share">共有メニューで送る</button>' : '') +
     '<button class="btn secondary" data-act="bk-copy">テキストでコピー</button></div></section>' +
     '<section class="data-sec"><h2>復元</h2><p class="note">バックアップした設定で、今の設定を置き換えます。</p>' +
     '<div class="row"><button class="btn secondary" data-act="rs-file">ファイルから復元</button><button class="btn secondary" data-act="rs-text">テキストを貼り付けて復元</button></div></section>' +
-    '<section class="data-sec"><h2>初期状態に戻す</h2><p class="note">設定を、最初に登録されていた47項目の状態に戻します。</p><div class="row"><button class="btn danger-outline" data-act="reset-master">設定を初期状態に戻す</button></div></section>' +
+    '<section class="data-sec"><h2>初期状態に戻す</h2><p class="note">設定を、店舗で記入した表の内容（最初に登録した状態）に戻します。</p><div class="row"><button class="btn danger-outline" data-act="reset-master">設定を初期状態に戻す</button></div></section>' +
     '<p class="note">データはこのiPadのブラウザの中にだけ保存されます。Safariの「履歴とWebサイトデータを消去」を行うと消えるため、設定を変えたらバックアップを取ってください。</p>';
 }
 function backupJSON() { return JSON.stringify({ app: APP_ID, kind: 'settings', v: 1, exportedAt: new Date().toISOString(), master: M }, null, 2); }
@@ -1496,7 +1555,7 @@ var ACT = {
     });
   },
   'reset-master': function () {
-    confirmDialog({ title: '設定を初期状態に戻しますか', body: '<p>追加した項目、保管場所の割り当て、必要在庫数、単位の変更などがすべて元に戻ります。先にバックアップを取ることをおすすめします。</p>', ok: '初期状態に戻す', okKind: 'danger' }, function () {
+    confirmDialog({ title: '設定を初期状態に戻しますか', body: '<p>追加した項目、保管場所の割り当て、発注目安、単位の変更などがすべて元に戻ります。先にバックアップを取ることをおすすめします。</p>', ok: '初期状態に戻す', okKind: 'danger' }, function () {
       M = defaultMaster(); saveMaster(); M.items.forEach(migrateEntries); renderSettings(); toast('設定を初期状態に戻しました', true);
     });
   }
@@ -1536,8 +1595,42 @@ document.addEventListener('visibilitychange', function () {
 window.addEventListener('resize', measureTop);
 if (window.ResizeObserver) new ResizeObserver(measureTop).observe($('#main-top'));
 
+/* ================= 表の内容の反映（1回だけ） ================= */
+/* すでに使っている iPad の設定へ、店舗で記入した表の内容（単位・保管場所・発注目安・購入先）を反映する。
+   入力途中の数量は、新しい保管場所へ移す。自分で追加した項目には触れない */
+function applySheet() {
+  SHEET.forEach(function (s) {
+    var it = itemById(s[0]); if (!it || it.cat === 'cash') return;
+    var fresh = sheetItem(M, s);
+    if (it.id === 'f01' && it.name === 'アサイー作り置き') it.name = fresh.name;
+    if (!fresh.active) { it.active = false; return; }
+    it.unit = fresh.unit; it.req = fresh.req; it.locs = fresh.locs; sortLocs(it);
+    if (!it.memo) it.memo = fresh.memo;
+    migrateEntries(it);
+  });
+  CASH.forEach(function (c) { var it = itemById(c.id); if (it && (!it.memo || it.memo === c.old)) it.memo = c.memo; });
+  saveMaster();
+}
+/* 表の「在庫」欄を、最初の在庫確認で表示する「前回の数量」にする（その項目の前回の数量がまだ無い場合だけ） */
+function seedPrev() {
+  SHEET.forEach(function (s) {
+    if (s[7] === null) return;
+    var it = itemById(s[0]); if (!it || !it.active) return;
+    var ks = keysOf(it); if (ks.length !== 1) return;
+    if (P.entries[it.id] && Object.keys(P.entries[it.id]).length) return;
+    P.entries[it.id] = {};
+    P.entries[it.id][ks[0]] = { q: s[7], u: it.unit || idByName(M.units, s[2], 'u'), d: null };
+  });
+  savePrev();
+}
+
 /* ================= 起動 ================= */
 if (!checkStorage()) { storageOK = false; $('#st-warn').hidden = false; }
+if ((lsGet(K_SEED) || 1) < SEED_VER) {
+  if (lsGet(K_MASTER)) applySheet();
+  seedPrev();
+  lsSet(K_SEED, SEED_VER);
+}
 if (!lsGet(K_MASTER)) saveMaster();
 route();
 
