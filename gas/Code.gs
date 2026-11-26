@@ -9,17 +9,10 @@
  * 「在庫管理」シートの1行目の見出し（商品名・在庫数・発注目安・単位・保管場所）を見て、
  * 商品名が同じ行の値だけを書き換えます。見出しに「購入必要」「確認日」が無ければ右に足します。
  * シートに無い商品は下に行を足します。ほかの列・ほかのシートには触れません。
- *
- * XLSX_ID を入れた場合は、書き込んだあとにスプレッドシート全体を .xlsx に書き出し、
- * そのファイル（元の「在庫管理.xlsx」）の中身を置き換えます。ファイルの ID・名前・共有・URL は変わりません。
- * 置き換える前の中身は、ドライブの「版を管理」に残ります。.xlsx を直接書き換えても、次の書き込みで上書きされます。
- * このときは、同じフォルダの appsscript.json の oauthScopes（ドライブの編集）もプロジェクトに入れてください。
- * 入れないと、Apps Script がドライブの「閲覧」だけの許可を求め、.xlsx を置き換えられません（upload-403）。
  */
 const KEY = 'ここを合言葉に書き換える';
 const SHEET_NAME = '在庫管理';
 const SPREADSHEET_ID = '';   // スプレッドシートから開いた Apps Script なら空のままで OK
-const XLSX_ID = '';          // 同じ内容を入れる .xlsx ファイルの ID（使わないなら空のまま）
 
 const COLS = ['商品名', '在庫数', '発注目安', '単位', '保管場所', '購入必要', '確認日'];
 const FIELDS = { '在庫数': 'stock', '発注目安': 'target', '単位': 'unit', '保管場所': 'loc', '購入必要': 'need', '確認日': 'date' };
@@ -40,39 +33,12 @@ function doPost(e) {
   if (!data || data.app !== 'sweets-zaiko' || !Array.isArray(data.items)) return json_({ ok: false, error: 'format' });
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
-  let xlsx = '';
   try {
     write_(data);
-    if (XLSX_ID) xlsx = copyToXlsx_();
   } finally {
     lock.releaseLock();
   }
-  return json_({ ok: true, rows: data.items.length, xlsx: xlsx });
-}
-
-/** スプレッドシート全体を .xlsx に書き出し、XLSX_ID のファイルの中身を置き換える。失敗してもスプレッドシートへの書き込みは取り消さない */
-function copyToXlsx_() {
-  try {
-    SpreadsheetApp.flush();
-    const file = DriveApp.getFileById(XLSX_ID);
-    if (file.getMimeType() !== MimeType.MICROSOFT_EXCEL) return 'not-xlsx';
-    const auth = { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() };
-    const ex = UrlFetchApp.fetch('https://docs.google.com/spreadsheets/d/' + book_().getId() + '/export?format=xlsx',
-      { headers: auth, muteHttpExceptions: true });
-    if (ex.getResponseCode() !== 200) return 'export-' + ex.getResponseCode();
-    const up = UrlFetchApp.fetch('https://www.googleapis.com/upload/drive/v3/files/' + XLSX_ID + '?uploadType=media&supportsAllDrives=true', {
-      method: 'patch', contentType: MimeType.MICROSOFT_EXCEL, payload: ex.getBlob().getBytes(),
-      headers: auth, muteHttpExceptions: true
-    });
-    return up.getResponseCode() === 200 ? 'ok' : 'upload-' + up.getResponseCode() + ' ' + up.getContentText().slice(0, 300);
-  } catch (err) {
-    return 'error-' + err;
-  }
-}
-
-/** エディタで選んで「実行」する用：今のスプレッドシートの内容で .xlsx を置き換える（初回はドライブを使う許可の確認が出ます） */
-function copyToXlsxNow() {
-  Logger.log(XLSX_ID ? copyToXlsx_() : 'XLSX_ID が空です');
+  return json_({ ok: true, rows: data.items.length });
 }
 
 function keyOk_(e) {
