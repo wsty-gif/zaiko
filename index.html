@@ -439,6 +439,11 @@ button.set-main:active{opacity:.6}
 
 /* ================= 初期データ（在庫管理.pdf / 在庫管理2.pdf より） ================= */
 var APP_ID = 'sweets-zaiko';
+var APP_VER = '2026-11-26 15:50';
+var K_ERR = 'sweetsZaiko.lastErr';
+window.addEventListener('error', function (e) {   // iPad で起きたエラーを、設定の「スプレッドシート」に出して確かめられるようにする
+  try { localStorage.setItem(K_ERR, JSON.stringify(new Date().toLocaleString('ja-JP') + ' ' + (e.message || '') + (e.lineno ? '（' + e.lineno + '行）' : ''))); } catch (x) {}
+});   // 設定の「スプレッドシート」に表示する版（iPad に新しい版が届いているかの確認用）
 var K_MASTER = 'sweetsZaiko.master.v1';
 var K_SESSION = 'sweetsZaiko.session.v1';
 var K_UI = 'sweetsZaiko.ui.v1';
@@ -1346,10 +1351,13 @@ function pullSheet(force) {
     .then(function (res) { return res.json(); })
     .then(function (j) {
       lastPull = Date.now();
-      if (!j || !j.ok || !Array.isArray(j.items)) return null;   // 読み込みに対応していない Apps Script
-      return importFromSheet(j.items);
-    })
-    .catch(function () { return null; })
+      if (!j || !j.ok || !Array.isArray(j.items)) { SY.pullErr = j && j.error === 'key' ? '合言葉が違います' : 'Apps Script が読み込みに対応していません'; saveSync(); renderSyncStatus(); return null; }
+      SY.lastPull = Date.now(); SY.pullErr = '';
+      var got = null;
+      try { got = importFromSheet(j.items); } catch (e) { SY.pullErr = '取り込み中にエラー（' + (e && e.message || e) + '）'; saveSync(); }
+      renderSyncStatus();
+      return got;
+    }, function () { SY.pullErr = 'つながりませんでした'; saveSync(); renderSyncStatus(); return null; })
     .then(function (got) { pullP = null; return got; });
   return pullP;
 }
@@ -1407,6 +1415,8 @@ function syncStatusText() {
   return SY.lastOk ? 'スプレッドシートに反映済み（' + fmtStamp(SY.lastOk) + '）' : '';
 }
 function renderSyncStatus() {
+  var dg = $('#sy-diag');
+  if (dg) dg.textContent = (syncOn() ? 'シートの読み込み：' + (SY.pullErr ? SY.pullErr : SY.lastPull ? fmtStamp(SY.lastPull) + ' に確認' : 'まだ') + '　' : '') + 'アプリの版：' + APP_VER + (lsGet(K_ERR) ? '　最後のエラー：' + lsGet(K_ERR) : '');
   ['#rp-sync', '#sy-st'].forEach(function (sel) {
     var el = $(sel); if (!el) return;
     var t = syncStatusText();
@@ -1826,7 +1836,7 @@ function setSyncHTML() {
     '<label class="fld"><span class="lbl">合言葉（Apps Script 側に書いたものと同じ文字）</span><input type="text" class="txt" id="sy-key" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + esc(SY.key) + '"></label>' +
     '<div class="row"><button class="btn primary" data-act="sy-save">保存して接続を確かめる</button>' +
     (syncOn() ? '<button class="btn secondary" data-act="sy-now">今すぐ反映</button><button class="btn ghost" data-act="sy-clear">連携をやめる</button>' : '') + '</div>' +
-    '<p class="sync-st" id="sy-st" hidden></p></section>';
+    '<p class="sync-st" id="sy-st" hidden></p><p class="note" id="sy-diag"></p></section>';
 }
 function setDataHTML() {
   var canShare = false;
