@@ -138,21 +138,28 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
 .empty{padding:48px 0;text-align:center;color:var(--text-2)}
 
 /* card */
-.card{display:grid;grid-template-columns:32px minmax(0,1fr) auto;grid-template-areas:"ic name qty" "ic sub st";column-gap:12px;row-gap:4px;align-items:center;align-content:center;width:100%;min-height:88px;padding:16px;text-align:left;background:var(--surface);border:1.5px solid var(--todo-line);border-radius:16px;box-shadow:var(--shadow);transition:opacity .1s ease-out;scroll-margin-top:calc(var(--top-h) + 12px);scroll-margin-bottom:calc(var(--foot-h) + 16px + var(--sa-b))}
-.card.has-need{grid-template-areas:"ic name qty" "ic sub st" "ic need need"}
-.card.has-ph{grid-template-columns:32px 56px minmax(0,1fr) auto;grid-template-areas:"ic ph name qty" "ic ph sub st"}
-.card.has-ph.has-need{grid-template-areas:"ic ph name qty" "ic ph sub st" "ic ph need need"}
-.c-ph{grid-area:ph;width:56px;height:56px;border-radius:10px;object-fit:cover;align-self:center;background:var(--surface-2)}
+.card{display:grid;grid-template-columns:32px minmax(0,1fr);column-gap:12px;align-items:center;align-content:center;width:100%;min-height:88px;padding:16px;text-align:left;background:var(--surface);border:1.5px solid var(--todo-line);border-radius:16px;box-shadow:var(--shadow);transition:opacity .1s ease-out;scroll-margin-top:calc(var(--top-h) + 12px);scroll-margin-bottom:calc(var(--foot-h) + 16px + var(--sa-b))}
+/* 1行目：名前と状態（短い）、2行目：保管場所と数量。行ごとに幅を決めるので、名前に幅を多く取れる */
+.c-body{display:flex;flex-direction:column;gap:4px;min-width:0}
+.c-row{display:flex;align-items:baseline;gap:8px;min-width:0}
+.c-row .c-name,.c-row .c-sub{flex:1;min-width:0}
+.c-row .c-st,.c-row .c-qty{flex:none}
+/* 写真のある項目は、状態の丸の位置に写真を置き、状態の印は写真の右下に重ねる（名前の幅を狭めない） */
+.card.has-ph{grid-template-columns:44px minmax(0,1fr)}
+.c-phwrap{position:relative;width:44px;height:44px;align-self:center}
+.c-ph{display:block;width:44px;height:44px;border-radius:10px;object-fit:cover;background:var(--surface-2)}
 .card:active{opacity:.7}
-.c-ic{grid-area:ic;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--todo-line)}
+.c-ic{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--todo-line)}
 .c-ic svg{width:20px;height:20px;stroke-width:3}
-.c-name{grid-area:name;font-size:19px;font-weight:600;line-height:1.35;overflow-wrap:anywhere}
-.c-qty{grid-area:qty;font-size:24px;font-weight:700;text-align:right;white-space:nowrap;line-height:1.2}
+.c-phwrap .c-ic{position:absolute;right:-6px;bottom:-6px;width:22px;height:22px;background:var(--surface);box-shadow:0 0 0 2px var(--surface)}
+.c-phwrap .c-ic svg{width:14px;height:14px}
+.c-name{font-size:19px;font-weight:600;line-height:1.35;overflow-wrap:anywhere}
+.c-qty{font-size:24px;font-weight:700;text-align:right;white-space:nowrap;line-height:1.2}
 .c-qty .dash{color:var(--line-strong);font-weight:400}
 .c-qty .prev{font-size:16px;font-weight:600;color:var(--text-3)}
-.c-sub{grid-area:sub;font-size:14px;color:var(--text-2);line-height:1.45;overflow-wrap:anywhere}
-.c-st{grid-area:st;font-size:14px;font-weight:600;text-align:right;white-space:nowrap;color:var(--text-3)}
-.c-need{grid-area:need;justify-self:start;margin-top:4px;padding:4px 12px;border-radius:8px;font-size:15px;font-weight:700;color:var(--warn);background:var(--surface);border:1.5px solid var(--warn-line)}
+.c-sub{align-self:center;font-size:14px;color:var(--text-2);line-height:1.45;overflow-wrap:anywhere}
+.c-st{font-size:14px;font-weight:600;text-align:right;white-space:nowrap;color:var(--text-3)}
+.c-need{align-self:flex-start;margin-top:4px;padding:4px 12px;border-radius:8px;font-size:15px;font-weight:700;color:var(--warn);background:var(--surface);border:1.5px solid var(--warn-line)}
 .c-need.mis{color:var(--unit);border-color:var(--unit-line)}
 .st-partial .c-ic{border:2px dashed var(--ok)}
 .st-partial .c-st{color:var(--ok)}
@@ -255,6 +262,7 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
 .calc .need{color:var(--warn);font-weight:700}
 .calc .ok{color:var(--ok);font-weight:600}
 .calc .mis{color:var(--unit);font-weight:600}
+.calc .undo{margin-left:auto;align-self:center;font-weight:600}
 .pad{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:68px;gap:8px}
 .key{border-radius:12px;background:var(--surface-2);font-size:28px;font-weight:600;font-variant-numeric:tabular-nums;display:flex;align-items:center;justify-content:center}
 .key.fn{font-size:18px;color:var(--text-2)}
@@ -859,12 +867,12 @@ function cardHTML(it, r, lk) {
   else if (st === 'mismatch') need = '<span class="c-need mis">単位の確認が必要</span>';
   var ph = PH[it.id];
   return '<button class="card st-' + st + (need ? ' has-need' : '') + (ph ? ' has-ph' : '') + '" data-act="open" data-id="' + esc(it.id) + '"' + (lk ? ' data-k="' + esc(lk) + '"' : '') + ' id="card-' + esc(it.id) + (lk ? '-' + esc(lk) : '') + '">' +
-    '<span class="c-ic">' + stIcon(st) + '</span>' +
-    (ph ? '<img class="c-ph" src="' + ph + '" alt="" loading="lazy">' : '') +
-    '<span class="c-name">' + esc(it.name) + '</span>' +
-    '<span class="c-qty num">' + (qty ? esc(qty) : pq ? '<span class="prev">前回 ' + esc(pq) + '</span>' : '<span class="dash">—</span>') + '</span>' +
-    '<span class="c-sub">' + esc(sub) + '</span>' +
-    '<span class="c-st">' + lbl + '</span>' + need + '</button>';
+    (ph ? '<span class="c-phwrap"><img class="c-ph" src="' + ph + '" alt="" loading="lazy"><span class="c-ic">' + stIcon(st) + '</span></span>'
+        : '<span class="c-ic">' + stIcon(st) + '</span>') +
+    '<span class="c-body"><span class="c-row"><span class="c-name">' + esc(it.name) + '</span><span class="c-st">' + lbl + '</span></span>' +
+    '<span class="c-row"><span class="c-sub">' + esc(sub) + '</span>' +
+    '<span class="c-qty num">' + (qty ? esc(qty) : pq ? '<span class="prev">前回 ' + esc(pq) + '</span>' : '<span class="dash">—</span>') + '</span></span>' +
+    need + '</span></button>';
 }
 function renderMain() {
   if (!S || screen !== 'main') return;
@@ -985,7 +993,6 @@ function renderInput(swap) {
     '<div class="in-meta">' + loc + '<span>' + CAT_LABEL[it.cat] + '</span><span class="in-remain">未入力 残り <b class="num">' + (st.total - st.done) + '</b></span></div>' +
     '<h2 class="in-name" id="in-name">' + esc(it.name) + '</h2>' +
     (it.memo ? '<p class="in-memo">' + esc(it.memo) + '</p>' : '') + '</div>' +
-    (e ? '<button class="btn ghost sm" data-act="in-unset">未入力に戻す</button>' : '') +
     '<button class="icon-btn" data-act="in-close" aria-label="閉じる">' + ico('close') + '</button></div>';
   if (multi) {
     h += '<div class="in-tabs' + (swap ? ' swap' : '') + '">' + ks.map(function (k) {
@@ -1052,6 +1059,8 @@ function updInput() {
       else if (r.ns === 'mismatch') ch += '<span class="mis">単位が違うため計算できません（発注目安の単位は「' + esc(uName(it.req.u)) + '」）</span>';
     }
   }
+  // 「未入力に戻す」は閉じる（×）から離し、計算の欄の右端に置く
+  if (getE(it.id, inp.k)) ch += '<button class="btn secondary sm undo" data-act="in-unset">未入力に戻す</button>';
   $('#in-calc').innerHTML = ch;
 
   var empty = d === '';
