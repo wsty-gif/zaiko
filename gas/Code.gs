@@ -9,6 +9,11 @@
  * 「在庫管理」シートの1行目の見出し（商品名・在庫数・発注目安・単位・保管場所）を見て、
  * 商品名が同じ行の値だけを書き換えます。見出しに「購入必要」「確認日」が無ければ右に足します。
  * シートに無い商品は下に行を足します。ほかの列・ほかのシートには触れません。
+ *
+ * 事務所のパソコンで「在庫数」「単位」を直した場合：
+ * - アプリは ?action=read でシートの在庫数を読み、直された数を iPad に取り込みます。
+ * - アプリは書き込むとき、項目ごとに「アプリが最後に見たシートの値（base）」を送ります。
+ *   シートの値が base と違う（アプリがまだ取り込んでいない変更がある）行は書き換えず、skipped で返します。
  */
 const KEY = 'ここを合言葉に書き換える';
 const SHEET_NAME = '在庫管理';
@@ -19,8 +24,29 @@ const FIELDS = { '在庫数': 'stock', '発注目安': 'target', '単位': 'unit
 
 function doGet(e) {
   if (!keyOk_(e)) return json_({ ok: false, error: 'key' });
-  return json_({ ok: true, app: 'sweets-zaiko', sheet: SHEET_NAME });
+  if (e.parameter.action === 'read') return json_({ ok: true, items: read_() });
+  return json_({ ok: true, app: 'sweets-zaiko', sheet: SHEET_NAME, read: true });
 }
+
+/** シートの「商品名・在庫数・単位」を、画面に表示されている文字のまま返す */
+function read_() {
+  const sh = book_().getSheetByName(SHEET_NAME);
+  if (!sh) return [];
+  const lastRow = sh.getLastRow(), lastCol = sh.getLastColumn();
+  if (lastRow < 2 || lastCol < 1) return [];
+  const header = sh.getRange(1, 1, 1, lastCol).getDisplayValues()[0].map(function (h) { return String(h).trim(); });
+  const cn = header.indexOf('商品名'), cs = header.indexOf('在庫数'), cu = header.indexOf('単位');
+  if (cn < 0 || cs < 0) return [];
+  return sh.getRange(2, 1, lastRow - 1, lastCol).getDisplayValues()
+    .filter(function (r) { return String(r[cn]).trim() !== ''; })
+    .map(function (r) { return { name: String(r[cn]).trim(), stock: r[cs], unit: cu >= 0 ? r[cu] : '' }; });
+}
+
+/** 在庫数と単位を比べるための文字（全角→半角、カンマと空白を除く）。アプリ側と同じ決まり */
+function norm_(v) {
+  return String(v === null || v === undefined ? '' : v).normalize('NFKC').replace(/[,\s]/g, '');
+}
+function key_(stock, unit) { return norm_(stock) + '|' + norm_(unit); }
 
 function doPost(e) {
   if (!keyOk_(e)) return json_({ ok: false, error: 'key' });
@@ -33,12 +59,13 @@ function doPost(e) {
   if (!data || data.app !== 'sweets-zaiko' || !Array.isArray(data.items)) return json_({ ok: false, error: 'format' });
   const lock = LockService.getScriptLock();
   lock.waitLock(20000);
+  let r = { skipped: [], written: {} };
   try {
-    write_(data);
+    r = write_(data) || r;
   } finally {
     lock.releaseLock();
   }
-  return json_({ ok: true, rows: data.items.length });
+  return json_({ ok: true, rows: data.items.length, skipped: r.skipped, written: r.written });
 }
 
 function keyOk_(e) {
@@ -84,14 +111,26 @@ function write_(d) {
     rowOf[it.name] = i;
   });
   const n = names.length;
-  if (!n) return;
+  if (!n) return null;
   if (namesChanged) sh.getRange(2, col['商品名'], n, 1).setValues(names.map(function (x) { return [x]; }));
+
+  // 事務所で直されて、アプリがまだ取り込んでいない行は書き換えない（アプリが次に読み込んで取り込む）
+  const curStock = sh.getRange(2, col['在庫数'], n, 1).getDisplayValues();
+  const curUnit = sh.getRange(2, col['単位'], n, 1).getDisplayValues();
+  const skipped = [];
+  const items = d.items.filter(function (it) {
+    if (typeof it.base !== 'string') return true;
+    const i = rowOf[it.name];
+    if (key_(curStock[i][0], curUnit[i][0]) === it.base) return true;
+    skipped.push(it.name);
+    return false;
+  });
 
   // 列ごとにまとめて書く（ほかの列の数式などは触らない）
   Object.keys(FIELDS).forEach(function (h) {
     const range = sh.getRange(2, col[h], n, 1);
     const vals = range.getValues();
-    d.items.forEach(function (it) { vals[rowOf[it.name]][0] = safe_(it[FIELDS[h]]); });
+    items.forEach(function (it) { vals[rowOf[it.name]][0] = safe_(it[FIELDS[h]]); });
     range.setValues(vals);
   });
   // 購入が必要な行の「購入必要」をオレンジにする
@@ -103,6 +142,13 @@ function write_(d) {
   let at = header.indexOf('最終更新') + 1;
   if (!at) { at = header.length + 2; sh.getRange(1, at).setValue('最終更新'); }
   sh.getRange(1, at + 1).setValue(d.sentAtText || '');
+
+  // 書き込んだ行の「表示されている在庫数・単位」を返す（アプリは次の比較にこれを使う）
+  const newStock = sh.getRange(2, col['在庫数'], n, 1).getDisplayValues();
+  const newUnit = sh.getRange(2, col['単位'], n, 1).getDisplayValues();
+  const written = {};
+  items.forEach(function (it) { const i = rowOf[it.name]; written[it.name] = key_(newStock[i][0], newUnit[i][0]); });
+  return { skipped: skipped, written: written };
 }
 
 function json_(o) {

@@ -789,7 +789,7 @@ function show(name) {
   ['start', 'main', 'report', 'settings'].forEach(function (s) { $('#scr-' + s).hidden = s !== name; });
   if (name === 'start') renderStart();
   else if (name === 'main') renderMain();
-  else if (name === 'report') { renderReport(); renderSyncStatus(); if (SY.pending) runSync(); }
+  else if (name === 'report') { renderReport(); renderSyncStatus(); if (SY.pending) runSync(); else pullSheet(true).then(function (g) { afterPull(g); }); }
   else renderSettings();
   window.scrollTo(0, name === 'main' ? mainScrollY : 0);
 }
@@ -830,6 +830,7 @@ function beginSession() {
   UI.filter = 'all'; saveUI();
   mainScrollY = 0;
   show('main');
+  pullSheet(true).then(function (g) { afterPull(g); });
 }
 
 /* ================= メイン画面 ================= */
@@ -978,6 +979,7 @@ function openInput(id, k, swap) {
   var p = e ? null : getP(id, k);   // 未入力なら、前回の数量を最初から表示する（保存するまでは未入力のまま）
   var src = e || p;
   inp = { id: id, k: k, draft: src ? String(src.q) : '', fresh: !!src, carried: !e && !!p, prevDate: p ? p.d : null,
+    fromSheet: !!(src && src.src === 'sheet'),
     unit: src && src.u && unitById(src.u) ? src.u : defUnit(it), err: '', touched: false };
   $('#ov-input').hidden = false;
   updateLock();
@@ -1024,8 +1026,10 @@ function updInput() {
   var unitLbl = it.cat === 'cash' ? (it.kind === 'yen' ? '円' : '枚') : uName(inp.unit) + (it.atLeast && q !== null && q >= it.atLeast ? '以上' : '');
   var val = $('#in-val');
   var carry = inp.carried && !inp.touched && d !== '';
+  var office = inp.fromSheet && !inp.touched && d !== '';   // 事務所のパソコンで直された数
+  var carryMsg = office ? '事務所のパソコンで変更された数です。同じならそのまま保存できます' : '前回の数量です。同じならそのまま保存できます';
   if (d === '') val.innerHTML = '<span class="ph">数量を入力</span>';
-  else val.innerHTML = (carry ? '<span class="carry">前回' + (inp.prevDate ? '<br>' + esc(inp.prevDate.slice(5).replace('-', '/').replace(/^0/, '').replace('/0', '/')) : '') + '</span>' : '') +
+  else val.innerHTML = (carry ? '<span class="carry">' + (office ? '事務所' : '前回') + (inp.prevDate ? '<br>' + esc(inp.prevDate.slice(5).replace('-', '/').replace(/^0/, '').replace('/0', '/')) : '') + '</span>' : '') +
     '<span class="v num">' + esc(it.cat === 'cash' && it.kind === 'yen' ? yen(q) : d) + '</span>' + (unitLbl ? '<span class="u">' + esc(unitLbl) + '</span>' : '');
   val.classList.toggle('fresh', inp.fresh && d !== '');
 
@@ -1035,9 +1039,9 @@ function updInput() {
       return '<button class="unit" data-act="unit" data-u="' + esc(u.id) + '" aria-pressed="' + (u.id === inp.unit) + '">' + esc(u.name) + '</button>';
     }).join('') + '</div>';
     if (inp.err === 'unit') uh += '<p class="u-msg err">単位を選んでください</p>';
-    else if (carry) uh += '<p class="u-msg">前回の数量です。同じならそのまま保存できます</p>';
+    else if (carry || office) uh += '<p class="u-msg">' + carryMsg + '</p>';
     else if (!defUnit(it)) uh += '<p class="u-msg">選んだ単位は、次回からこの項目で自動的に選ばれます</p>';
-  } else if (carry) uh = '<p class="u-msg">前回の数量です。同じならそのまま保存できます</p>';
+  } else if (carry || office) uh = '<p class="u-msg">' + carryMsg + '</p>';
   $('#in-units').innerHTML = uh;
 
   var ch = '', draftE = q === null ? null : { q: q, u: it.cat === 'cash' ? null : inp.unit };
@@ -1195,13 +1199,16 @@ function toast(msg, ok) {
   t.hidden = false;
   t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(function () { t.hidden = true; }, 2800);
+  toastTimer = setTimeout(function () { t.hidden = true; }, Math.max(2800, String(msg).length * 70));   // 長い文は長めに出す
 }
 
 /* ================= スプレッドシートへの反映 ================= */
 /* 事務所のパソコンから在庫数を見られるよう、Google スプレッドシート（Apps Script のウェブアプリ）へ
    全項目の最新の在庫数をまとめて送る。数量を保存するたびに、数秒待ってから送る（まとめて1回） */
-var SY = Object.assign({ url: '', key: '', lastOk: null, lastErr: '', pending: false }, lsGet(K_SYNC) || {});
+var SY = Object.assign({ url: '', key: '', lastOk: null, lastErr: '', pending: false, sheet: null }, lsGet(K_SYNC) || {});
+// SY.sheet：項目ごとに「アプリが最後に確かめたシートの在庫数・単位」（sheetKey の文字）。
+// シートの値がこれと違えば、事務所のパソコンで直されたと分かる。書き込むときは base として送り、
+// Apps Script は base と違う（まだ取り込んでいない変更がある）行を書き換えない
 var syncTimer = null, syncBusy = false, syncRev = 0;
 function saveSync() { lsSet(K_SYNC, SY); }
 function syncOn() { return /^https?:\/\/\S+$/.test(SY.url || '') && !!SY.key; }
@@ -1231,6 +1238,7 @@ function syncItems() {
       if (L) {
         var r = L.r;
         row.date = L.date ? fmtSlash(L.date) : '表の記入';
+        if (r.es.some(function (e) { return e && e.src === 'sheet'; })) row.date += '（事務所で変更）';
         if (L.date && (!newest || L.date > newest)) newest = L.date;
         if (it.cat === 'cash') {
           row.stock = it.kind === 'yen' ? r.amount : r.count;
@@ -1254,7 +1262,101 @@ function syncItems() {
 }
 function syncPayload() {
   var d = syncItems(), now = Date.now();
+  if (SY.sheet) d.items.forEach(function (it) { if (typeof SY.sheet[it.name] === 'string') it.base = SY.sheet[it.name]; });
   return { app: APP_ID, v: 2, sentAt: new Date(now).toISOString(), sentAtText: fmtStamp(now), dateText: d.newest ? fmtDate(d.newest, true) : '', items: d.items };
+}
+
+/* ---------- 事務所のパソコンでスプレッドシートの在庫数を直したときの取り込み ---------- */
+/* 比べるための文字（全角→半角、カンマと空白を除く）。Apps Script の key_ と同じ決まり */
+function normSheet(v) {
+  var s = String(v === null || v === undefined ? '' : v);
+  return (s.normalize ? s.normalize('NFKC') : s).replace(/[,\s]/g, '');
+}
+function sheetKey(stock, unit) { return normSheet(stock) + '|' + normSheet(unit); }
+function unitIdOf(name) { for (var i = 0; i < M.units.length; i++) if (M.units[i].name === name) return M.units[i].id; return null; }
+function itemByName(name) { for (var i = 0; i < M.items.length; i++) if (M.items[i].name === name) return M.items[i]; return null; }
+/* シートの「在庫数」「単位」を、アプリの数量 {q, u} にする。読めなければ null */
+function parseSheetValue(it, stock, unit) {
+  var s = normSheet(stock), m;
+  if (it.cat === 'cash') {
+    m = s.match(/^(\d+)(円|枚)?$/);
+    return m ? { q: +m[1], u: null } : null;
+  }
+  m = s.match(/^(\d+(?:\.\d+)?)([^\d.]*?)(以上)?$/);
+  if (!m) return null;
+  var q = r2(parseFloat(m[1])), un = m[2] || normSheet(unit), u = un ? unitIdOf(un) : defUnit(it);
+  if (un && !u) return null;                 // 登録されていない単位
+  if (m[3] && !it.atLeast) return null;      // 「〇以上」は6袋以上でまとめる備品だけ
+  if (q > 0 && !u) return null;
+  if (it.atLeast && q > it.atLeast) q = it.atLeast;
+  return { q: q, u: u || null };
+}
+/* 取り込んだ数量を入れる。今回の在庫確認で入力済みならその数量を、まだなら「前回」の数量を置き換える。
+   保管場所が2か所ある項目は、1つ目の場所に合計を入れ、ほかの場所は0にする */
+function putImported(it, v) {
+  var ks = keysOf(it), useCur = !!S && ks.some(function (k) { return getE(it.id, k); });
+  var map = useCur ? S.entries : P.entries, today = todayStr();
+  map[it.id] = {};
+  ks.forEach(function (k, i) {
+    var e = { q: i === 0 ? v.q : 0, u: v.u, src: 'sheet' };
+    if (useCur) e.t = Date.now(); else e.d = today;
+    map[it.id][k] = e;
+  });
+  if (useCur) saveSession(); else savePrev();
+}
+/* rows：Apps Script の read が返す [{name, stock, unit}]。戻り値 {changed:[名前], failed:[名前], dirty:真偽} */
+function importFromSheet(rows) {
+  var mine = {}, got = { changed: [], failed: [], dirty: false };
+  syncItems().items.forEach(function (r) { mine[r.name] = sheetKey(r.stock, r.unit); });
+  if (!SY.sheet) SY.sheet = {};
+  rows.forEach(function (row) {
+    var it = itemByName(String(row.name || ''));
+    if (!it || !it.active) return;
+    var cur = sheetKey(row.stock, row.unit), known = SY.sheet[it.name];
+    SY.sheet[it.name] = cur;
+    if (known === undefined || cur === known) return;    // 初めて見た行・事務所で直されていない行
+    got.dirty = true;                                     // 確認日などを書き直すため、あとで送る
+    var local = mine[it.name];
+    if (local === cur) return;                            // iPad と同じ数
+    if (local !== known) return;                          // iPad にまだ送っていない入力がある → iPad の数を優先
+    var s = normSheet(row.stock);
+    if (s === '' || s === '未確認') return;               // 消された・未確認 → iPad の数に戻す
+    var v = parseSheetValue(it, row.stock, row.unit);
+    if (!v) { got.failed.push(it.name); return; }
+    var unitLbl = it.cat === 'cash' ? (it.kind === 'yen' ? '円' : '枚') : uName(v.u);
+    if (sheetKey(it.atLeast && v.q >= it.atLeast ? it.atLeast + '以上' : v.q, unitLbl) === local) return;   // 書き方が違うだけ
+    putImported(it, v);
+    got.changed.push(it.name);
+  });
+  saveSync();
+  return got;
+}
+var pullP = null, lastPull = 0;
+function pullSheet(force) {
+  if (!syncOn() || navigator.onLine === false) return Promise.resolve(null);
+  if (pullP) return pullP;
+  if (!force && Date.now() - lastPull < 20000) return Promise.resolve(null);
+  pullP = fetch(syncUrl() + '&action=read', { cache: 'no-store' })
+    .then(function (res) { return res.json(); })
+    .then(function (j) {
+      lastPull = Date.now();
+      if (!j || !j.ok || !Array.isArray(j.items)) return null;   // 読み込みに対応していない Apps Script
+      return importFromSheet(j.items);
+    })
+    .catch(function () { return null; })
+    .then(function (got) { pullP = null; return got; });
+  return pullP;
+}
+function nameList(a) { return a.slice(0, 3).join('、') + (a.length > 3 ? ' ほか' + (a.length - 3) + '件' : ''); }
+function afterPull(got, inSync) {
+  if (!got) return;
+  if (got.changed.length || got.failed.length) {
+    if (screen === 'main') renderMain(); else if (screen === 'report') renderReport();
+    var msg = got.changed.length ? '事務所で変更された在庫数を取り込みました（' + nameList(got.changed) + '）' : '';
+    if (got.failed.length) msg += (msg ? '。' : '') + '読み取れない在庫数はiPadの数のままにします（' + nameList(got.failed) + '）';
+    toast(msg, !got.failed.length);
+  }
+  if (got.dirty && !inSync) queueSync(1000);
 }
 function queueSync(delay) {
   if (!syncOn()) return;
@@ -1270,12 +1372,19 @@ function runSync() {
   syncBusy = true;
   var rev = syncRev;
   renderSyncStatus();
-  return fetch(syncUrl(), { method: 'POST', body: JSON.stringify(syncPayload()) })
+  // 送る前に、事務所のパソコンで直された在庫数を取り込む（取り込まずに送ると上書きしてしまうため）
+  return pullSheet(true)
+    .then(function (got) {
+      afterPull(got, true);
+      return fetch(syncUrl(), { method: 'POST', body: JSON.stringify(syncPayload()) });
+    })
     .then(function (res) { return res.json(); })
     .then(function (j) {
       if (!j || !j.ok) throw new Error(j && j.error === 'key' ? '合言葉が違うため、反映できませんでした' : 'スプレッドシートに書き込めませんでした');
       SY.lastOk = Date.now(); SY.lastErr = '';
-      if (rev === syncRev) SY.pending = false;
+      if (SY.sheet && j.written) Object.keys(j.written).forEach(function (n) { SY.sheet[n] = j.written[n]; });
+      if (Array.isArray(j.skipped) && j.skipped.length) SY.pending = true;   // 送っている間に事務所で直された → 取り込んでから送り直す
+      else if (rev === syncRev) SY.pending = false;
     }, function (e) { throw e; })
     .catch(function (e) { SY.lastErr = e && /合言葉|書き込め/.test(e.message) ? e.message : '送れませんでした（通信やURLを確認してください）'; })
     .then(function () {
@@ -1834,7 +1943,7 @@ var ACT = {
     var url = $('#sy-url').value.trim(), key = $('#sy-key').value.trim();
     if (!/^https?:\/\/\S+$/.test(url)) { toast('URLを確認してください（https:// から始まるURL）'); return; }
     if (!key) { toast('合言葉を入力してください'); return; }
-    SY.url = url.replace(/[?&]key=[^&]*/, ''); SY.key = key; SY.lastErr = ''; saveSync();
+    SY.url = url.replace(/[?&]key=[^&]*/, ''); SY.key = key; SY.lastErr = ''; SY.sheet = null; saveSync();
     renderSettings();
     toast('接続を確かめています…');
     fetch(syncUrl(), { method: 'GET' }).then(function (r) { return r.json(); }).then(function (j) {
@@ -1889,7 +1998,7 @@ document.addEventListener('keydown', function (e) {
 document.addEventListener('touchstart', function () {}, { passive: true });   // iOSで:activeを効かせる
 document.addEventListener('visibilitychange', function () {
   if (document.visibilityState !== 'visible') return;
-  if (typeof SY !== 'undefined' && SY.pending) runSync();
+  if (typeof SY !== 'undefined') { if (SY.pending) runSync(); else pullSheet().then(function (g) { afterPull(g); }); }
   var today = todayStr();
   if (screen === 'start') { renderStart(); return; }
   if (screen === 'main' && S && S.date !== today && S.ack !== today && !inp && !layers.length) {
@@ -1959,6 +2068,10 @@ if (!checkStorage()) { storageOK = false; $('#st-warn').hidden = false; }
 })();
 if (!lsGet(K_MASTER)) saveMaster();
 route();
+pullSheet(true).then(function (g) { afterPull(g); });   // 開いたときに、事務所のパソコンで直された在庫数を取り込む
+setInterval(function () {   // 開いている間は2分おきに確かめる（入力中は確かめない）
+  if (document.visibilityState === 'visible' && !inp && !syncBusy) pullSheet().then(function (g) { afterPull(g); });
+}, 120000);
 photoLoadAll().then(function () { if (screen === 'main') renderMain(); if (inp) renderInput(); }, function () {});
 if (SY.pending) queueSync(1500);
 window.addEventListener('online', function () { if (SY.pending) runSync(); });
