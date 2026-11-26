@@ -140,6 +140,9 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
 /* card */
 .card{display:grid;grid-template-columns:32px minmax(0,1fr) auto;grid-template-areas:"ic name qty" "ic sub st";column-gap:12px;row-gap:4px;align-items:center;align-content:center;width:100%;min-height:88px;padding:16px;text-align:left;background:var(--surface);border:1.5px solid var(--todo-line);border-radius:16px;box-shadow:var(--shadow);transition:opacity .1s ease-out;scroll-margin-top:calc(var(--top-h) + 12px);scroll-margin-bottom:calc(var(--foot-h) + 16px + var(--sa-b))}
 .card.has-need{grid-template-areas:"ic name qty" "ic sub st" "ic need need"}
+.card.has-ph{grid-template-columns:32px 56px minmax(0,1fr) auto;grid-template-areas:"ic ph name qty" "ic ph sub st"}
+.card.has-ph.has-need{grid-template-areas:"ic ph name qty" "ic ph sub st" "ic ph need need"}
+.c-ph{grid-area:ph;width:56px;height:56px;border-radius:10px;object-fit:cover;align-self:center;background:var(--surface-2)}
 .card:active{opacity:.7}
 .c-ic{grid-area:ic;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--todo-line)}
 .c-ic svg{width:20px;height:20px;stroke-width:3}
@@ -188,6 +191,10 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
 .rp-end h2{font-size:18px}
 .rp-end .btn{justify-self:start}
 .copied{font-size:15px;color:var(--ok);font-weight:600}
+.sync-st{display:flex;flex-wrap:wrap;align-items:center;gap:4px 8px;font-size:15px;color:var(--text-2);line-height:1.6}
+.sync-st.ok{color:var(--ok);font-weight:600}
+.sync-st.err{color:var(--danger);font-weight:600}
+.sync-st .btn{font-weight:600}
 
 /* overlays */
 .overlay{position:fixed;inset:0;z-index:50;display:flex;align-items:flex-end;justify-content:center;padding:calc(12px + var(--sa-t)) max(12px,var(--sa-r)) 0 max(12px,var(--sa-l));background:rgba(42,36,33,.42);overscroll-behavior:contain;animation:fade .15s ease-out}
@@ -255,6 +262,16 @@ svg.i{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:2;stroke
 .key.none{grid-row:span 2;flex-direction:column;gap:2px;background:var(--surface);border:2px solid var(--line-strong);font-size:19px;font-weight:700;color:var(--text);line-height:1.3}
 .key.none small{font-size:14px;font-weight:400;color:var(--text-2)}
 .key.none:active{background:var(--surface-2)}
+.key.none.half{grid-row:auto;font-size:17px;gap:0}
+.key.none.half small{font-size:13px}
+.in-ph{flex:none;width:88px;height:88px;border-radius:12px;overflow:hidden;background:var(--surface-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;margin-right:4px}
+.in-ph img{width:100%;height:100%;object-fit:cover;display:block}
+.in-ph.add{border:1.5px dashed var(--line-strong);color:var(--text-2);font-size:14px;font-weight:600;width:72px;height:72px}
+.in-ph.add:active{background:var(--surface-3)}
+.viewer-img{display:block;width:100%;max-height:62vh;object-fit:contain;border-radius:12px;background:var(--surface-2);margin-top:12px}
+.ph-field{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.ph-field img{width:120px;height:120px;object-fit:cover;border-radius:12px;border:1px solid var(--line)}
+.ph-field .ph-none{width:120px;height:120px;border-radius:12px;border:1.5px dashed var(--line-strong);display:flex;align-items:center;justify-content:center;color:var(--text-3);font-size:14px}
 .key:disabled{opacity:.3}
 .in-foot{display:grid;grid-template-columns:1fr 1.4fr;gap:12px;margin-top:16px}
 .in-foot .btn{min-height:64px;font-size:19px}
@@ -335,6 +352,7 @@ button.set-main:active{opacity:.6}
   <symbol id="i-down" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-pin" viewBox="0 0 24 24"><path d="M12 21s-6-5.5-6-11a6 6 0 0 1 12 0c0 5.5-6 11-6 11z"/><circle cx="12" cy="10" r="2"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"/><circle cx="12" cy="13.5" r="3.5"/></symbol>
   <symbol id="i-trash" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
 </svg>
 
@@ -378,6 +396,7 @@ button.set-main:active{opacity:.6}
       <h2>LINEへの送信が済んだら</h2>
       <p class="note">今回の在庫確認を締めます。入力した数量は、次回の入力画面に「前回」の数量として表示されるので、変わったところだけ直せば済みます。</p>
       <p class="copied" id="rp-copied" hidden></p>
+      <p class="sync-st" id="rp-sync" hidden></p>
       <button class="btn secondary" data-act="end">今回の在庫確認を終了する</button>
     </div>
   </div>
@@ -404,6 +423,7 @@ button.set-main:active{opacity:.6}
 
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 <input type="file" id="rs-file" accept="application/json,.json,text/plain,.txt" hidden>
+<input type="file" id="ph-file" accept="image/*" hidden>
 
 <script>
 (function () {
@@ -416,12 +436,13 @@ var K_SESSION = 'sweetsZaiko.session.v1';
 var K_UI = 'sweetsZaiko.ui.v1';
 var K_PREV = 'sweetsZaiko.prev.v1';
 var K_SEED = 'sweetsZaiko.seed';
+var K_SYNC = 'sweetsZaiko.sync.v1';
 var CATS = ['food', 'supply', 'cash'];
 var CAT_LABEL = { food: '食材', supply: '備品', cash: '金庫' };
 
 /* 店舗で記入した2枚の表（2026-11-26 受領）を項目ごとにまとめたもの。
    単位・保管場所・在庫：「場所と単位の認識合わせ」、発注目安・購入先：「発注や作成が必要な数値目安と購入先」
-   [id, 商品名, 単位, 保管場所, 発注目安の数, 発注目安の単位, メモ, 在庫（前回の数量の初期値）, 有効]
+   [id, 商品名, 単位, 保管場所, 発注目安の数, 発注目安の単位, メモ, 在庫（前回の数量の初期値）, 有効, この数以上は「〇以上」と表示]
    在庫は、保管場所が1か所で読み取れたものだけを入れる（2か所以上の項目は場所ごとの内訳が分からないため入れない） */
 var SHEET = [
   ['f01', 'アサイー原料', 'ケース', ['冷蔵庫内', 'シータ'], 1, 'ケース', '購入先：業者発注（めいらく）', null],   // 表は「1箱」→ 店舗の指示でケースにそろえた
@@ -453,13 +474,14 @@ var SHEET = [
   ['f27', 'ハチミツ', '個', ['店奥'], 5, '個', '購入先：業務スーパー', 6],
   ['f28', '砂糖', null, [], null, null, '', null, false],          // 2枚とも×印 → 無効（設定から戻せます）
   ['f29', '抹茶粉', '袋', ['店奥'], 1, '袋', '購入先：業務スーパー', 1],
-  ['s01', 'アサイーカップ', '袋', ['店奥'], 3, '袋', '購入先：業者発注', null],
-  ['s02', 'アサイー蓋', '袋', ['店奥'], 2, '袋', '購入先：業者発注', null],
-  ['s03', 'アサイースプーン', '袋', ['店奥'], 2, '袋', '購入先：業者発注', null],
-  ['s04', 'アイスカップ', '袋', ['店奥'], 3, '袋', '購入先：業者発注', null],
-  ['s05', 'アイススプーン', '袋', ['店奥'], 2, '袋', '購入先：業者発注', null],
-  ['s06', 'クロッフル皿', '袋', ['店奥'], 2, '袋', '購入先：百均', null],
-  ['s07', 'クロッフル棒', '袋', ['店奥'], 2, '袋', '購入先：業者発注', null],
+  // s01〜s07：数は「6袋以上」でまとめて表示し、発注目安は5袋（店舗の指示）
+  ['s01', 'アサイーカップ', '袋', ['店奥'], 5, '袋', '購入先：業者発注', null, true, 6],
+  ['s02', 'アサイー蓋', '袋', ['店奥'], 5, '袋', '購入先：業者発注', null, true, 6],
+  ['s03', 'アサイースプーン', '袋', ['店奥'], 5, '袋', '購入先：業者発注', null, true, 6],
+  ['s04', 'アイスカップ', '袋', ['店奥'], 5, '袋', '購入先：業者発注', null, true, 6],
+  ['s05', 'アイススプーン', '袋', ['店奥'], 5, '袋', '購入先：業者発注', null, true, 6],
+  ['s06', 'クロッフル皿', '袋', ['店奥'], 5, '袋', '購入先：百均', null, true, 6],
+  ['s07', 'クロッフル棒', '袋', ['店奥'], 5, '袋', '購入先：業者発注', null, true, 6],
   ['s08', 'テイクアウト容器', '袋', ['店奥'], 3, '袋', '購入先：業者発注', null],
   ['s09', 'キッチンペーパー', '個', ['店奥'], 1, '個', '購入先：スーパー', 0],
   ['s10', 'ウェットテッシュ', '個', ['店奥'], 2, '個', '購入先：スーパー', 5],
@@ -474,7 +496,7 @@ var CASH = [
   { id: 'cash_100', name: '100円玉', kind: 'count', value: 100, memo: '500円玉・100円玉 計5千円くらいになったら両替', old: '500円玉・100円玉 計5千円くらいになったら' },
   { id: 'cash_other', name: 'その他 小銭', kind: 'yen', value: 1, memo: '' }
 ];
-var SEED_VER = 5;   // 表の内容を、すでに使っている iPad の設定へ1回だけ反映するための版番号（2：表の登録、3：名前と在庫の訂正、4：アサイー原料の発注目安をケースに、5：バナナは棚上だけ）
+var SEED_VER = 6;   // 表の内容を、すでに使っている iPad の設定へ1回だけ反映するための版番号（2：表の登録、3：名前と在庫の訂正、4：アサイー原料の発注目安をケースに、5：バナナは棚上だけ、6：袋の備品7項目を「6袋以上」表示・発注目安5袋に）
 
 function pad2(n) { return (n < 10 ? '0' : '') + n; }
 function idByName(list, name, prefix) {
@@ -487,7 +509,7 @@ function sheetItem(m, s) {
     unit: s[2] ? idByName(m.units, s[2], 'u') : null,
     req: s[4] !== null ? { q: s[4], u: idByName(m.units, s[5], 'u') } : null,
     locs: s[3].map(function (n) { return idByName(m.locs, n, 'l'); }),
-    memo: s[6], active: s[8] !== false
+    memo: s[6], active: s[8] !== false, atLeast: s[9] || null
   };
 }
 function defaultMaster() {
@@ -532,6 +554,7 @@ function normMaster(m) {
     } else {
       o.unit = uid[it.unit] ? it.unit : null;
       o.req = (it.req && isFinite(it.req.q) && Number(it.req.q) >= 0 && uid[it.req.u]) ? { q: r2(Number(it.req.q)), u: it.req.u } : null;
+      o.atLeast = Number(it.atLeast) >= 1 ? Math.floor(Number(it.atLeast)) : null;
     }
     items.push(o);
   });
@@ -552,7 +575,7 @@ var UI = Object.assign({ filter: 'all', view: 'list', setTab: 'items' }, lsGet(K
 var screen = null, prevScreen = 'start', mainScrollY = 0, inp = null, reorder = false;
 var layers = [];
 
-function saveMaster() { lsSet(K_MASTER, M); }
+function saveMaster() { lsSet(K_MASTER, M); if (typeof SY !== 'undefined' && SY) queueSync(); }
 function saveSession() { if (S) lsSet(K_SESSION, S); }
 function savePrev() { lsSet(K_PREV, P); }
 function saveUI() { lsSet(K_UI, { filter: UI.filter, view: UI.view, setTab: UI.setTab }); }
@@ -627,7 +650,10 @@ function hasEntries(s) {
 /* 1項目の状態。ov = {k, e} で入力中の値を仮に当てはめて計算する */
 function calc(it, ov) {
   var ks = keysOf(it);
-  var es = ks.map(function (k) { return ov && ov.k === k ? ov.e : getE(it.id, k); });
+  return calcEntries(it, ks, ks.map(function (k) { return ov && ov.k === k ? ov.e : getE(it.id, k); }));
+}
+/* 保管場所ごとの数量 es から、合計・購入必要数・状態を出す */
+function calcEntries(it, ks, es) {
   var done = es.filter(Boolean).length;
   var r = { ks: ks, es: es, n: ks.length, done: done, complete: done === ks.length };
   if (it.cat === 'cash') {
@@ -656,16 +682,22 @@ function calc(it, ov) {
   r.st = !r.complete ? (done ? 'partial' : 'todo') : (r.ns === 'short' ? 'short' : r.ns === 'mismatch' ? 'mismatch' : 'done');
   return r;
 }
+/* 数量の表示。「〇以上」でまとめる項目は、その数以上を「6袋以上」のように表す */
+function qtyStr(it, q, u) {
+  var un = uName(u);
+  if (it.atLeast && q >= it.atLeast) return it.atLeast + un + '以上';
+  return fmtN(q) + un;
+}
 function entryText(it, e) {
   if (!e) return '未入力';
   if (it.cat === 'cash') return it.kind === 'yen' ? yen(e.q) + '円' : e.q + '枚';
-  return fmtN(e.q) + uName(e.u);
+  return qtyStr(it, e.q, e.u);
 }
 function totalText(it, r) {
   if (it.cat === 'cash') return it.kind === 'yen' ? yen(r.amount) + '円' : r.count + '枚';
   var us = Object.keys(r.sums).sort(function (a, b) { return unitOrder(a) - unitOrder(b); });
   if (!us.length) return '0' + (r.zeroUnit ? uName(r.zeroUnit) : '');
-  return us.map(function (u) { return fmtN(r.sums[u]) + uName(u); }).join('＋');
+  return us.map(function (u) { return qtyStr(it, r.sums[u], u); }).join('＋');
 }
 /* 前回の数量の表示用（複数の保管場所は合計。単位が違えば並べる） */
 function prevText(it, keys) {
@@ -749,7 +781,7 @@ function show(name) {
   ['start', 'main', 'report', 'settings'].forEach(function (s) { $('#scr-' + s).hidden = s !== name; });
   if (name === 'start') renderStart();
   else if (name === 'main') renderMain();
-  else if (name === 'report') renderReport();
+  else if (name === 'report') { renderReport(); renderSyncStatus(); if (SY.pending) runSync(); }
   else renderSettings();
   window.scrollTo(0, name === 'main' ? mainScrollY : 0);
 }
@@ -825,8 +857,10 @@ function cardHTML(it, r, lk) {
   var need = '';
   if (st === 'short') need = '<span class="c-need">不足・購入 ' + esc(fmtN(r.need) + uName(it.req.u)) + '</span>';
   else if (st === 'mismatch') need = '<span class="c-need mis">単位の確認が必要</span>';
-  return '<button class="card st-' + st + (need ? ' has-need' : '') + '" data-act="open" data-id="' + esc(it.id) + '"' + (lk ? ' data-k="' + esc(lk) + '"' : '') + ' id="card-' + esc(it.id) + (lk ? '-' + esc(lk) : '') + '">' +
+  var ph = PH[it.id];
+  return '<button class="card st-' + st + (need ? ' has-need' : '') + (ph ? ' has-ph' : '') + '" data-act="open" data-id="' + esc(it.id) + '"' + (lk ? ' data-k="' + esc(lk) + '"' : '') + ' id="card-' + esc(it.id) + (lk ? '-' + esc(lk) : '') + '">' +
     '<span class="c-ic">' + stIcon(st) + '</span>' +
+    (ph ? '<img class="c-ph" src="' + ph + '" alt="" loading="lazy">' : '') +
     '<span class="c-name">' + esc(it.name) + '</span>' +
     '<span class="c-qty num">' + (qty ? esc(qty) : pq ? '<span class="prev">前回 ' + esc(pq) + '</span>' : '<span class="dash">—</span>') + '</span>' +
     '<span class="c-sub">' + esc(sub) + '</span>' +
@@ -944,7 +978,10 @@ function openInput(id, k, swap) {
 function renderInput(swap) {
   var it = itemById(inp.id), ks = keysOf(it), multi = ks.length > 1, e = getE(it.id, inp.k), st = stats();
   var loc = multi ? '' : '<span class="loc-tag' + (inp.k === '_' ? ' none' : '') + '">' + ico('pin') + esc(lName(inp.k)) + '</span>';
-  var h = '<div class="in-head' + (swap ? ' swap' : '') + '"><div class="in-title">' +
+  var ph = PH[it.id];
+  var phH = ph ? '<button class="in-ph" data-act="ph-view" data-id="' + esc(it.id) + '" aria-label="写真を大きく表示"><img src="' + ph + '" alt=""></button>'
+    : '<button class="in-ph add" data-act="ph-add" data-id="' + esc(it.id) + '" aria-label="写真を登録">' + ico('camera') + '<span>写真</span></button>';
+  var h = '<div class="in-head' + (swap ? ' swap' : '') + '">' + phH + '<div class="in-title">' +
     '<div class="in-meta">' + loc + '<span>' + CAT_LABEL[it.cat] + '</span><span class="in-remain">未入力 残り <b class="num">' + (st.total - st.done) + '</b></span></div>' +
     '<h2 class="in-name" id="in-name">' + esc(it.name) + '</h2>' +
     (it.memo ? '<p class="in-memo">' + esc(it.memo) + '</p>' : '') + '</div>' +
@@ -956,10 +993,12 @@ function renderInput(swap) {
       return '<button class="in-tab' + (ee ? ' done' : '') + '" data-act="in-tab" data-k="' + esc(k) + '" aria-pressed="' + (k === inp.k) + '">' + ico('pin') + esc(lName(k)) + '<span class="q">' + esc(ee ? entryText(it, ee) : pp ? '未入力（前回 ' + entryText(it, pp) + '）' : '未入力') + '</span></button>';
     }).join('') + '</div>';
   }
-  var keys = ['7', '8', '9', 'bs', '4', '5', '6', 'clr', '1', '2', '3', 'none', '0', '.'];
+  var keys = it.atLeast ? ['7', '8', '9', 'bs', '4', '5', '6', 'clr', '1', '2', '3', 'atl', '0', '.', 'none'] : ['7', '8', '9', 'bs', '4', '5', '6', 'clr', '1', '2', '3', 'none', '0', '.'];
   var padH = keys.map(function (k) {
     if (k === 'bs') return '<button class="key fn" data-act="key" data-k="bs" aria-label="1文字削除">' + ico('back') + '</button>';
     if (k === 'clr') return '<button class="key fn" data-act="key" data-k="clr">クリア</button>';
+    if (k === 'atl') return '<button class="key none half" data-act="key" data-k="atl">' + esc(it.atLeast + uName(defUnit(it) || inp.unit) + '以上') + '<small>保存して次へ</small></button>';
+    if (k === 'none' && it.atLeast) return '<button class="key none half" data-act="key" data-k="none">在庫なし（0）<small>保存して次へ</small></button>';
     if (k === 'none') return '<button class="key none" data-act="key" data-k="none">在庫なし<span>（0）</span><small>保存して次へ</small></button>';
     if (k === '.') return '<button class="key" data-act="key" data-k="." aria-label="小数点"' + (it.cat === 'cash' ? ' disabled' : '') + '>.</button>';
     return '<button class="key' + (k === '0' ? ' zero' : '') + '" data-act="key" data-k="' + k + '">' + k + '</button>';
@@ -975,7 +1014,7 @@ function renderInput(swap) {
 function draftQ() { return inp.draft === '' ? null : r2(parseFloat(inp.draft)); }
 function updInput() {
   var it = itemById(inp.id), d = inp.draft, q = draftQ();
-  var unitLbl = it.cat === 'cash' ? (it.kind === 'yen' ? '円' : '枚') : uName(inp.unit);
+  var unitLbl = it.cat === 'cash' ? (it.kind === 'yen' ? '円' : '枚') : uName(inp.unit) + (it.atLeast && q !== null && q >= it.atLeast ? '以上' : '');
   var val = $('#in-val');
   var carry = inp.carried && !inp.touched && d !== '';
   if (d === '') val.innerHTML = '<span class="ph">数量を入力</span>';
@@ -1041,8 +1080,9 @@ function pressKey(k) {
     v = r2(v + (k === '+1' ? 1 : -1)); if (v < 0) v = 0;
     if (String(Math.floor(v)).length > maxInt(it)) return;
     d = String(v);
-  } else if (k === 'none') {
-    inp.draft = '0'; inp.fresh = false; inp.touched = true;
+  } else if (k === 'none' || k === 'atl') {
+    inp.draft = k === 'none' ? '0' : String(it.atLeast); inp.fresh = false; inp.touched = true;
+    if (k === 'atl' && !inp.unit) inp.unit = defUnit(it);
     if (commit() === 'ok') goNext();
     return;
   }
@@ -1060,9 +1100,11 @@ function commit() {
     u = inp.unit && unitById(inp.unit) ? inp.unit : null;
     if (q > 0 && !u) { inp.err = 'unit'; updInput(); return 'err'; }
   }
+  if (it.atLeast && q > it.atLeast) q = it.atLeast;   // 「6袋以上」でまとめる項目は、それより多い数は区別しない
   setE(it.id, inp.k, { q: q, u: u, t: Date.now() });
   if (it.cat !== 'cash' && u && !defUnit(it)) { it.unit = u; saveMaster(); }   // 単位未設定の項目は、最初に選んだ単位を既定にする
   renderMain();
+  queueSync();
   return 'ok';
 }
 function goNext() {
@@ -1145,6 +1187,181 @@ function toast(msg, ok) {
   t.style.animation = 'none'; void t.offsetWidth; t.style.animation = '';
   clearTimeout(toastTimer);
   toastTimer = setTimeout(function () { t.hidden = true; }, 2800);
+}
+
+/* ================= スプレッドシートへの反映 ================= */
+/* 事務所のパソコンから在庫数を見られるよう、Google スプレッドシート（Apps Script のウェブアプリ）へ
+   全項目の最新の在庫数をまとめて送る。数量を保存するたびに、数秒待ってから送る（まとめて1回） */
+var SY = Object.assign({ url: '', key: '', lastOk: null, lastErr: '', pending: false }, lsGet(K_SYNC) || {});
+var syncTimer = null, syncBusy = false, syncRev = 0;
+function saveSync() { lsSet(K_SYNC, SY); }
+function syncOn() { return /^https?:\/\/\S+$/.test(SY.url || '') && !!SY.key; }
+function syncUrl() { return SY.url + (SY.url.indexOf('?') >= 0 ? '&' : '?') + 'key=' + encodeURIComponent(SY.key); }
+function fmtStamp(t) { var d = new Date(t); return d.getFullYear() + '/' + pad2(d.getMonth() + 1) + '/' + pad2(d.getDate()) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+function fmtSlash(ds) { return ds ? ds.replace(/-/g, '/') : ''; }
+/* 項目ごとの「いちばん新しい確定済みの数量」。今回の在庫確認で全部の場所を入力済みならそれ、なければ前回の数量 */
+function latestOf(it) {
+  var ks = keysOf(it), cur = calc(it);
+  if (cur.complete) return { r: cur, date: S ? S.date : null, src: 'cur' };
+  var es = ks.map(function (k) { return getP(it.id, k); });
+  if (!es.every(Boolean)) return null;
+  var ds = es.map(function (e) { return e.d; }).filter(Boolean).sort();
+  return { r: calcEntries(it, ks, es), date: ds.length ? ds[ds.length - 1] : null, src: 'prev' };
+}
+var SYNC_HEADER = ['区分', '商品名', '保管場所', '在庫', '単位', '在庫の表示', '発注目安', '購入必要', '確認日', 'メモ'];
+function syncRows() {
+  var rows = [], cashTotal = 0, cashAll = true, newest = null;
+  CATS.forEach(function (c) {
+    activeItems().forEach(function (it) {
+      if (it.cat !== c) return;
+      var L = latestOf(it);
+      var row = [CAT_LABEL[c], it.name, keysOf(it).map(lName).join('・'), '', '', '未確認', it.cat !== 'cash' && it.req ? fmtN(it.req.q) + uName(it.req.u) : '', '', '', it.memo || ''];
+      if (L) {
+        var r = L.r;
+        row[8] = L.date ? fmtSlash(L.date) : '表の記入';
+        if (L.date && (!newest || L.date > newest)) newest = L.date;
+        if (it.cat === 'cash') {
+          row[3] = it.kind === 'yen' ? r.amount : r.count;
+          row[4] = it.kind === 'yen' ? '円' : '枚';
+          row[5] = it.kind === 'yen' ? yen(r.amount) + '円' : r.count + '枚（' + yen(r.amount) + '円）';
+          cashTotal += r.amount;
+        } else {
+          var us = Object.keys(r.sums);
+          if (us.length <= 1) { row[3] = us.length ? r.sums[us[0]] : 0; row[4] = uName(us[0] || r.zeroUnit || it.unit); }
+          row[5] = totalText(it, r);
+          row[7] = r.st === 'short' ? '購入 ' + fmtN(r.need) + uName(it.req.u) : r.st === 'mismatch' ? '単位の確認が必要' : '';
+        }
+      } else if (it.cat === 'cash') cashAll = false;
+      rows.push(row);
+    });
+  });
+  rows.push(['金庫', '金庫の合計', '金庫', cashTotal, '円', yen(cashTotal) + '円' + (cashAll ? '' : '（未確認を除く）'), '', '', '', '']);
+  return { rows: rows, newest: newest };
+}
+function syncPayload() {
+  var d = syncRows(), now = Date.now();
+  return { app: APP_ID, v: 1, sentAt: new Date(now).toISOString(), sentAtText: fmtStamp(now), dateText: d.newest ? fmtDate(d.newest, true) : '', header: SYNC_HEADER, rows: d.rows, flagCol: 7 };
+}
+function queueSync(delay) {
+  if (!syncOn()) return;
+  syncRev++;
+  SY.pending = true; saveSync();
+  clearTimeout(syncTimer);
+  syncTimer = setTimeout(runSync, delay == null ? 4000 : delay);
+}
+function runSync() {
+  clearTimeout(syncTimer);
+  if (!syncOn() || syncBusy) return Promise.resolve(false);
+  if (navigator.onLine === false) { SY.lastErr = '通信できないため、まだ反映していません'; saveSync(); renderSyncStatus(); return Promise.resolve(false); }
+  syncBusy = true;
+  var rev = syncRev;
+  renderSyncStatus();
+  return fetch(syncUrl(), { method: 'POST', body: JSON.stringify(syncPayload()) })
+    .then(function (res) { return res.json(); })
+    .then(function (j) {
+      if (!j || !j.ok) throw new Error(j && j.error === 'key' ? '合言葉が違うため、反映できませんでした' : 'スプレッドシートに書き込めませんでした');
+      SY.lastOk = Date.now(); SY.lastErr = '';
+      if (rev === syncRev) SY.pending = false;
+    }, function (e) { throw e; })
+    .catch(function (e) { SY.lastErr = e && /合言葉|書き込め/.test(e.message) ? e.message : '送れませんでした（通信やURLを確認してください）'; })
+    .then(function () {
+      syncBusy = false; saveSync(); renderSyncStatus();
+      if (SY.pending && !SY.lastErr) queueSync(1000);   // 送っている間に数量が変わったら、もう一度送る
+      return !SY.lastErr;
+    });
+}
+function syncStatusText() {
+  if (!syncOn()) return '';
+  if (syncBusy) return 'スプレッドシートへ送信中…';
+  if (SY.lastErr) return SY.lastErr;
+  if (SY.pending) return 'まもなくスプレッドシートに反映します';
+  return SY.lastOk ? 'スプレッドシートに反映済み（' + fmtStamp(SY.lastOk) + '）' : '';
+}
+function renderSyncStatus() {
+  ['#rp-sync', '#sy-st'].forEach(function (sel) {
+    var el = $(sel); if (!el) return;
+    var t = syncStatusText();
+    el.hidden = !t;
+    el.className = 'sync-st' + (SY.lastErr ? ' err' : SY.pending || syncBusy ? '' : ' ok');
+    el.innerHTML = esc(t) + (SY.lastErr ? ' <button class="btn ghost sm" data-act="sy-now">もう一度送る</button>' : '');
+  });
+}
+
+/* ================= 写真（新人向けの見分け用） ================= */
+/* 写真は端末内の IndexedDB に保存する（localStorage は容量が小さいため）。PH は表示用の写し */
+var PH = {}, idb = null;
+function idbOpen() {
+  if (idb) return Promise.resolve(idb);
+  return new Promise(function (res, rej) {
+    if (!window.indexedDB) { rej(new Error('no indexedDB')); return; }
+    var rq = indexedDB.open('sweetsZaiko', 1);
+    rq.onupgradeneeded = function () { if (!rq.result.objectStoreNames.contains('photos')) rq.result.createObjectStore('photos'); };
+    rq.onsuccess = function () { idb = rq.result; res(idb); };
+    rq.onerror = function () { rej(rq.error); };
+  });
+}
+function idbTx(mode, fn) {
+  return idbOpen().then(function (db) {
+    return new Promise(function (res, rej) {
+      var tx = db.transaction('photos', mode), out = fn(tx.objectStore('photos'));
+      tx.oncomplete = function () { res(out); };
+      tx.onerror = tx.onabort = function () { rej(tx.error); };
+    });
+  });
+}
+function photoLoadAll() {
+  var got = {};
+  return idbTx('readonly', function (st) {
+    var rq = st.openCursor();
+    rq.onsuccess = function () { var c = rq.result; if (c) { got[c.key] = c.value; c.continue(); } };
+  }).then(function () { PH = got; });
+}
+function photoPut(id, url) { return idbTx('readwrite', function (st) { st.put(url, id); }).then(function () { PH[id] = url; }); }
+function photoDel(id) { return idbTx('readwrite', function (st) { st.delete(id); }).then(function () { delete PH[id]; }); }
+/* 撮った・選んだ写真を、長い辺 960px の JPEG に縮めて保存する */
+function readPhoto(file) {
+  return new Promise(function (res, rej) {
+    var url = URL.createObjectURL(file), img = new Image();
+    img.onload = function () {
+      var w = img.naturalWidth, h = img.naturalHeight, k = Math.min(1, 960 / Math.max(w, h));
+      var c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(h * k));
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      res(c.toDataURL('image/jpeg', 0.8));
+    };
+    img.onerror = function () { URL.revokeObjectURL(url); rej(new Error('image')); };
+    img.src = url;
+  });
+}
+function pickPhoto(cb) {
+  var el = $('#ph-file');
+  el.value = '';
+  el.onchange = function () {
+    var file = el.files && el.files[0];
+    if (file) readPhoto(file).then(cb, function () { toast('写真を読み込めませんでした'); });
+  };
+  el.click();
+}
+function addPhotoFor(id, after) {
+  pickPhoto(function (url) {
+    photoPut(id, url).then(function () { toast('写真を登録しました', true); renderMain(); if (after) after(); },
+      function () { toast('写真を保存できませんでした'); });
+  });
+}
+function openPhotoViewer(id) {
+  var it = itemById(id); if (!it || !PH[id]) return;
+  var L = openLayer('<div class="sh-head"><h2>' + esc(it.name) + '</h2><button class="icon-btn" data-a="close" aria-label="閉じる">' + ico('close') + '</button></div>' +
+    '<img class="viewer-img" src="' + PH[id] + '" alt="' + esc(it.name) + 'の写真">' +
+    '<div class="sh-foot"><button class="btn ghost" data-a="del">写真を削除</button><button class="btn secondary" data-a="change">' + ico('camera') + '写真を変更</button><button class="btn primary" data-a="close">閉じる</button></div>', 'small', {
+    close: function () { L.close(); },
+    change: function () { addPhotoFor(id, function () { L.close(); if (inp && inp.id === id) renderInput(); }); },
+    del: function () {
+      confirmDialog({ title: '写真を削除しますか', body: '<p>「' + esc(it.name) + '」の写真を削除します。</p>', ok: '削除', okKind: 'danger' }, function () {
+        photoDel(id).then(function () { L.close(); renderMain(); if (inp && inp.id === id) renderInput(); toast('写真を削除しました', true); }, function () {});
+      });
+    }
+  });
 }
 
 /* ================= 日付 ================= */
@@ -1247,6 +1464,7 @@ function onEnd() {
   }, function () {
     rollIntoPrev(S);
     S = null; lsSet(K_SESSION, null);
+    queueSync(0);
     UI.filter = 'all'; saveUI(); mainScrollY = 0;
     show('start');
     toast('在庫確認を終了しました。次回は今回の数量から入力できます', true);
@@ -1254,19 +1472,27 @@ function onEnd() {
 }
 
 /* ================= 設定画面 ================= */
-var SET_TABS = [['items', '商品・備品'], ['locs', '保管場所'], ['units', '単位'], ['data', 'バックアップ']];
+var SET_TABS = [['items', '商品・備品'], ['locs', '保管場所'], ['units', '単位'], ['sync', 'スプレッドシート'], ['data', 'バックアップ']];
 function renderSettings() {
   $('#set-tabs').innerHTML = SET_TABS.map(function (t) { return '<button data-act="set-tab" data-t="' + t[0] + '" aria-pressed="' + (UI.setTab === t[0]) + '">' + t[1] + '</button>'; }).join('');
   var b = $('#set-body');
   if (UI.setTab === 'items') b.innerHTML = setItemsHTML();
   else if (UI.setTab === 'locs') b.innerHTML = setLocsHTML();
   else if (UI.setTab === 'units') b.innerHTML = setUnitsHTML();
+  else if (UI.setTab === 'sync') { b.innerHTML = setSyncHTML(); renderSyncStatus(); }
   else b.innerHTML = setDataHTML();
 }
 function itemMeta(it) {
   var loc = it.locs.length ? it.locs.map(lName).join('・') : '保管場所 未設定';
   if (it.cat === 'cash') return esc(loc) + ' ／ ' + (it.kind === 'yen' ? '金額（円）で入力' : yen(it.value) + '円 × 枚数');
-  return esc(loc) + ' ／ 単位 ' + (it.unit ? esc(uName(it.unit)) : '未設定') + ' ／ 発注目安 ' + (it.req ? esc(fmtN(it.req.q) + uName(it.req.u)) : '未設定');
+  return esc(loc) + ' ／ 単位 ' + (it.unit ? esc(uName(it.unit)) : '未設定') + ' ／ 発注目安 ' + (it.req ? esc(fmtN(it.req.q) + uName(it.req.u)) : '未設定') +
+    (it.atLeast ? ' ／ ' + esc(it.atLeast + uName(it.unit)) + '以上でまとめて表示' : '') + (PH[it.id] ? ' ／ 写真あり' : '');
+}
+function phFieldHTML(id) {
+  var ph = PH[id];
+  return (ph ? '<img src="' + ph + '" alt="">' : '<span class="ph-none">写真なし</span>') +
+    '<button type="button" class="btn secondary sm" data-a="ph-pick">' + ico('camera') + (ph ? '写真を変更' : '写真を撮る・選ぶ') + '</button>' +
+    (ph ? '<button type="button" class="btn ghost sm" data-a="ph-del">写真を削除</button>' : '');
 }
 function setItemsHTML() {
   var h = '<div class="set-tools"><button class="btn secondary" data-act="item-add">' + ico('plus') + '項目を追加</button>' +
@@ -1307,7 +1533,8 @@ function openItemEdit(id) {
   var f = JSON.parse(JSON.stringify(src)), cash = f.cat === 'cash';
   var h = '<div class="sh-head"><h2>' + (isNew ? '項目を追加' : '項目の編集') + '</h2><button class="icon-btn" data-a="cancel" aria-label="閉じる">' + ico('close') + '</button></div><div class="form-body">' +
     '<label class="fld"><span class="lbl">商品名</span><input type="text" class="txt" id="fe-name" value="' + esc(f.name) + '" autocomplete="off" enterkeyhint="done"></label>' +
-    '<p class="err" id="fe-name-err" hidden>商品名を入力してください</p>';
+    '<p class="err" id="fe-name-err" hidden>商品名を入力してください</p>' +
+    '<div class="fld"><span class="lbl">写真（どの商品か見分けるため。一覧と数量入力の画面に表示されます）</span><div class="ph-field" id="fe-ph">' + phFieldHTML(f.id) + '</div></div>';
   if (cash) h += '<div class="fld"><span class="lbl">カテゴリ</span><p class="fixed">金庫（' + (f.kind === 'yen' ? '金額を円で入力' : yen(f.value) + '円 × 枚数') + '）</p></div>';
   else h += '<div class="fld"><span class="lbl">カテゴリ</span><div class="opts">' + opt('cat', 'food', '食材', f.cat === 'food') + opt('cat', 'supply', '備品', f.cat === 'supply') + '</div></div>';
   h += '<div class="fld"><span class="lbl">保管場所（複数選べます）</span><div class="opts">' + (M.locs.length ? M.locs.map(function (l) { return opt('loc', l.id, l.name, f.locs.indexOf(l.id) >= 0); }).join('') : '<span class="note">保管場所が登録されていません</span>') + '</div></div>';
@@ -1317,15 +1544,28 @@ function openItemEdit(id) {
       '<div class="fld"><span class="lbl">発注目安（在庫がこれを下回ると購入必要になります）</span>' +
       '<div class="req-row"><button type="button" class="step sm" data-a="req-dec" aria-label="1減らす">−1</button><input type="text" inputmode="decimal" class="txt num" id="fe-req" value="' + (f.req ? esc(fmtN(f.req.q)) : '') + '" placeholder="未設定" autocomplete="off"><button type="button" class="step sm" data-a="req-inc" aria-label="1増やす">＋1</button><button type="button" class="btn ghost" data-a="req-clear">未設定にする</button></div>' +
       '<div class="opts">' + M.units.map(function (u) { return opt('requ', u.id, u.name, ru === u.id); }).join('') + '</div>' +
-      '<p class="err" id="fe-req-err" hidden></p></div>';
+      '<p class="err" id="fe-req-err" hidden></p></div>' +
+      '<div class="fld"><span class="lbl">まとめて表示する数（この数以上は「6袋以上」のように表示。空欄なら使いません）</span>' +
+      '<div class="req-row"><input type="text" inputmode="numeric" class="txt num" id="fe-atl" value="' + (f.atLeast ? f.atLeast : '') + '" placeholder="なし" autocomplete="off"></div>' +
+      '<p class="err" id="fe-atl-err" hidden></p></div>';
   }
   h += '<label class="fld"><span class="lbl">メモ（数量入力の画面に表示されます）</span><input type="text" class="txt" id="fe-memo" value="' + esc(f.memo) + '" autocomplete="off" enterkeyhint="done"></label>' +
     '<label class="switch"><input type="checkbox" id="fe-active"' + (f.active ? ' checked' : '') + '>在庫確認と報告に表示する</label>' +
     (isNew ? '' : '<div><button type="button" class="btn danger-outline" data-a="del">' + ico('trash') + 'この項目を削除</button></div>') +
     '</div><div class="sh-foot"><button class="btn secondary" data-a="cancel">キャンセル</button><button class="btn primary" data-a="save">保存</button></div>';
 
+  var newPhoto = false;
   var L = openLayer(h, 'form', {
-    cancel: function () { L.close(); },
+    cancel: function () { if (isNew && newPhoto) photoDel(f.id).catch(function () {}); L.close(); },
+    'ph-pick': function () {
+      pickPhoto(function (url) {
+        photoPut(f.id, url).then(function () { newPhoto = true; $('#fe-ph', L.sh).innerHTML = phFieldHTML(f.id); renderMain(); toast('写真を登録しました', true); },
+          function () { toast('写真を保存できませんでした'); });
+      });
+    },
+    'ph-del': function () {
+      photoDel(f.id).then(function () { $('#fe-ph', L.sh).innerHTML = phFieldHTML(f.id); renderMain(); toast('写真を削除しました', true); }, function () {});
+    },
     opt: function (b) {
       var g = b.dataset.g;
       if (g === 'loc') { b.setAttribute('aria-pressed', b.getAttribute('aria-pressed') !== 'true'); return; }
@@ -1341,6 +1581,7 @@ function openItemEdit(id) {
         M.items.splice(M.items.indexOf(src), 1);
         if (S && S.entries[src.id]) { delete S.entries[src.id]; saveSession(); }
         if (P.entries[src.id]) { delete P.entries[src.id]; savePrev(); }
+        if (PH[src.id]) photoDel(src.id).catch(function () {});
         saveMaster(); L.close(); renderSettings(); toast('削除しました', true);
       });
     },
@@ -1365,6 +1606,11 @@ function openItemEdit(id) {
           if (!ru2) { re.textContent = '発注目安の単位を選んでください'; re.hidden = false; return; }
           f.req = { q: r2(q), u: ru2 };
         }
+        var av = $('#fe-atl', L.sh).value.trim().replace(/[０-９]/g, function (c) { return String.fromCharCode(c.charCodeAt(0) - 0xFEE0); });
+        var ae = $('#fe-atl-err', L.sh);
+        if (av === '') f.atLeast = null;
+        else if (!/^\d+$/.test(av) || Number(av) < 1) { ae.textContent = 'まとめて表示する数は1以上の整数で入力してください'; ae.hidden = false; return; }
+        else f.atLeast = Number(av);
       }
       if (isNew) {
         var last = -1; M.items.forEach(function (x, i) { if (x.cat === f.cat) last = i; });
@@ -1444,10 +1690,19 @@ function setUnitsHTML() {
   });
   return h + '</ul><div><button class="btn secondary" data-act="unit-add">' + ico('plus') + '単位を追加</button></div>';
 }
+function setSyncHTML() {
+  return '<section class="data-sec"><h2>スプレッドシートへの反映</h2>' +
+    '<p class="note">在庫数を、事務所のパソコンから見られる Google スプレッドシートに書き込みます。数量を保存するたびに、数秒後に全項目の最新の在庫数をまとめて書き込みます（スプレッドシートの「在庫一覧」シート）。通信できないときは、次に通信できたときに送ります。</p>' +
+    '<label class="fld"><span class="lbl">送信先のURL（スプレッドシートに設定した Apps Script のウェブアプリのURL）</span><input type="url" class="txt" id="sy-url" inputmode="url" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="https://script.google.com/macros/s/…/exec" value="' + esc(SY.url) + '"></label>' +
+    '<label class="fld"><span class="lbl">合言葉（Apps Script 側に書いたものと同じ文字）</span><input type="text" class="txt" id="sy-key" autocomplete="off" autocapitalize="off" spellcheck="false" value="' + esc(SY.key) + '"></label>' +
+    '<div class="row"><button class="btn primary" data-act="sy-save">保存して接続を確かめる</button>' +
+    (syncOn() ? '<button class="btn secondary" data-act="sy-now">今すぐ反映</button><button class="btn ghost" data-act="sy-clear">連携をやめる</button>' : '') + '</div>' +
+    '<p class="sync-st" id="sy-st" hidden></p></section>';
+}
 function setDataHTML() {
   var canShare = false;
   try { canShare = !!(navigator.canShare && window.File && navigator.canShare({ files: [new File(['{}'], 'a.json', { type: 'application/json' })] })); } catch (e) {}
-  return '<section class="data-sec"><h2>バックアップ</h2><p class="note">商品・備品、保管場所、単位、発注目安、並び順を保存します。今回入力した数量は含みません。</p>' +
+  return '<section class="data-sec"><h2>バックアップ</h2><p class="note">商品・備品、保管場所、単位、発注目安、並び順を保存します。「ファイルに保存」には写真も含みます（「テキストでコピー」には含みません）。今回入力した数量は含みません。</p>' +
     '<div class="row"><button class="btn secondary" data-act="bk-file">ファイルに保存</button>' + (canShare ? '<button class="btn secondary" data-act="bk-share">共有メニューで送る</button>' : '') +
     '<button class="btn secondary" data-act="bk-copy">テキストでコピー</button></div></section>' +
     '<section class="data-sec"><h2>復元</h2><p class="note">バックアップした設定で、今の設定を置き換えます。</p>' +
@@ -1455,17 +1710,28 @@ function setDataHTML() {
     '<section class="data-sec"><h2>初期状態に戻す</h2><p class="note">設定を、店舗で記入した表の内容（最初に登録した状態）に戻します。</p><div class="row"><button class="btn danger-outline" data-act="reset-master">設定を初期状態に戻す</button></div></section>' +
     '<p class="note">データはこのiPadのブラウザの中にだけ保存されます。Safariの「履歴とWebサイトデータを消去」を行うと消えるため、設定を変えたらバックアップを取ってください。</p>';
 }
-function backupJSON() { return JSON.stringify({ app: APP_ID, kind: 'settings', v: 1, exportedAt: new Date().toISOString(), master: M }, null, 2); }
+function backupJSON(withPhotos) {
+  var o = { app: APP_ID, kind: 'settings', v: 1, exportedAt: new Date().toISOString(), master: M };
+  if (withPhotos && Object.keys(PH).length) o.photos = PH;
+  return JSON.stringify(o, null, withPhotos ? 0 : 2);
+}
 function backupName() { return 'zaiko-settings-' + todayStr().replace(/-/g, '') + '.json'; }
 function parseBackup(text) {
   var o; try { o = JSON.parse(text); } catch (e) { return null; }
   if (!o || typeof o !== 'object') return null;
   if (o.app && o.app !== APP_ID) return null;
-  return normMaster(o.master || o);
+  var m = normMaster(o.master || o);
+  if (!m) return null;
+  var photos = {};
+  if (o.photos && typeof o.photos === 'object') Object.keys(o.photos).forEach(function (k) { if (isStr(o.photos[k]) && /^data:image\//.test(o.photos[k])) photos[k] = o.photos[k]; });
+  return { master: m, photos: photos };
 }
-function applyRestore(m) {
-  confirmDialog({ title: '設定を復元しますか', body: '<p>今の設定を、バックアップの内容（' + m.items.length + '項目）に置き換えます。</p>', ok: '復元する' }, function () {
-    M = m; saveMaster(); M.items.forEach(migrateEntries); renderSettings(); toast('設定を復元しました', true);
+function applyRestore(b) {
+  var m = b.master, ids = Object.keys(b.photos);
+  confirmDialog({ title: '設定を復元しますか', body: '<p>今の設定を、バックアップの内容（' + m.items.length + '項目' + (ids.length ? '・写真' + ids.length + '枚' : '') + '）に置き換えます。</p>', ok: '復元する' }, function () {
+    M = m; saveMaster(); M.items.forEach(migrateEntries); renderSettings();
+    ids.reduce(function (p, id) { return p.then(function () { return photoPut(id, b.photos[id]); }); }, Promise.resolve())
+      .then(function () { toast('設定を復元しました', true); renderSettings(); }, function () { toast('設定は復元しましたが、写真を保存できませんでした'); });
   });
 }
 
@@ -1493,9 +1759,11 @@ var ACT = {
   unit: function (b) { if (!inp) return; inp.unit = b.dataset.u; inp.err = ''; inp.touched = true; updInput(); },
   'in-tab': function (b) { if (inp) switchTab(b.dataset.k); },
   'in-close': function () { closeInput(); },
+  'ph-view': function (b) { openPhotoViewer(b.dataset.id); },
+  'ph-add': function (b) { var id = b.dataset.id; addPhotoFor(id, function () { if (inp && inp.id === id) renderInput(); }); },
   'in-save-close': function () { if (commit() !== 'err') closeInput(); },
   'in-save-next': function () { if (commit() !== 'err') goNext(); },
-  'in-unset': function () { delE(inp.id, inp.k); renderMain(); openInput(inp.id, inp.k); },
+  'in-unset': function () { delE(inp.id, inp.k); renderMain(); queueSync(); openInput(inp.id, inp.k); },
   'copy-all': function () { onCopy('all'); },
   'copy-buy': function () { onCopy('buy'); },
   end: onEnd,
@@ -1534,19 +1802,37 @@ var ACT = {
   'unit-add': function () { askText('単位を追加', '', function (v) { var e = uniqName(M.units, v); if (e) return e; M.units.push({ id: newId('u'), name: v }); saveMaster(); renderSettings(); return null; }); },
   'bk-file': function () {
     try {
-      var blob = new Blob([backupJSON()], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a');
+      var blob = new Blob([backupJSON(true)], { type: 'application/json' }), url = URL.createObjectURL(blob), a = document.createElement('a');
       a.href = url; a.download = backupName(); document.body.appendChild(a); a.click(); a.remove();
       setTimeout(function () { URL.revokeObjectURL(url); }, 20000);
       toast('バックアップファイルの保存を開始しました');
     } catch (e) { toast('ファイルを作成できませんでした。「テキストでコピー」を使ってください'); }
   },
   'bk-share': function () {
-    var file = new File([backupJSON()], backupName(), { type: 'application/json' });
+    var file = new File([backupJSON(true)], backupName(), { type: 'application/json' });
     navigator.share({ files: [file], title: '在庫確認の設定' }).then(function () { toast('共有しました', true); }, function (e) { if (!e || e.name !== 'AbortError') toast('共有できませんでした'); });
   },
   'bk-copy': function () {
-    var text = backupJSON();
+    var text = backupJSON(false);
     copyText(text).then(function (ok) { if (ok) toast('設定をテキストでコピーしました', true); else openManualCopy(text, 'backup'); });
+  },
+  'sy-save': function () {
+    var url = $('#sy-url').value.trim(), key = $('#sy-key').value.trim();
+    if (!/^https?:\/\/\S+$/.test(url)) { toast('URLを確認してください（https:// から始まるURL）'); return; }
+    if (!key) { toast('合言葉を入力してください'); return; }
+    SY.url = url.replace(/[?&]key=[^&]*/, ''); SY.key = key; SY.lastErr = ''; saveSync();
+    renderSettings();
+    toast('接続を確かめています…');
+    fetch(syncUrl(), { method: 'GET' }).then(function (r) { return r.json(); }).then(function (j) {
+      if (j && j.ok) { toast('つながりました。在庫数を反映します', true); queueSync(0); }
+      else { SY.lastErr = j && j.error === 'key' ? '合言葉が違います' : 'スプレッドシート側の設定を確認してください'; saveSync(); renderSyncStatus(); toast(SY.lastErr); }
+    }, function () { SY.lastErr = 'つながりませんでした（URLと通信を確認してください）'; saveSync(); renderSyncStatus(); toast(SY.lastErr); });
+  },
+  'sy-now': function () { syncRev++; SY.pending = true; SY.lastErr = ''; saveSync(); runSync().then(function (ok) { toast(ok ? 'スプレッドシートに反映しました' : (SY.lastErr || '反映できませんでした'), ok); }); },
+  'sy-clear': function () {
+    confirmDialog({ title: '連携をやめますか', body: '<p>この iPad からスプレッドシートへの書き込みをやめます。スプレッドシートの内容は消えません。</p>', ok: '連携をやめる' }, function () {
+      SY = { url: '', key: '', lastOk: null, lastErr: '', pending: false }; saveSync(); renderSettings(); toast('連携をやめました', true);
+    });
   },
   'rs-file': function () { var f = $('#rs-file'); f.value = ''; f.click(); },
   'rs-text': function () {
@@ -1589,6 +1875,7 @@ document.addEventListener('keydown', function (e) {
 document.addEventListener('touchstart', function () {}, { passive: true });   // iOSで:activeを効かせる
 document.addEventListener('visibilitychange', function () {
   if (document.visibilityState !== 'visible') return;
+  if (typeof SY !== 'undefined' && SY.pending) runSync();
   var today = todayStr();
   if (screen === 'start') { renderStart(); return; }
   if (screen === 'main' && S && S.date !== today && S.ack !== today && !inp && !layers.length) {
@@ -1607,7 +1894,7 @@ function applySheet() {
     var fresh = sheetItem(M, s);
     if (it.id === 'f01' && (it.name === 'アサイー作り置き' || it.name === 'アサイー瓶詰')) it.name = fresh.name;
     if (!fresh.active) { it.active = false; return; }
-    it.unit = fresh.unit; it.req = fresh.req; it.locs = fresh.locs; sortLocs(it);
+    it.unit = fresh.unit; it.req = fresh.req; it.locs = fresh.locs; it.atLeast = fresh.atLeast; sortLocs(it);
     if (!it.memo) it.memo = fresh.memo;
     migrateEntries(it);
   });
@@ -1640,6 +1927,11 @@ if (!checkStorage()) { storageOK = false; $('#st-warn').hidden = false; }
         if (a.name === 'アサイー瓶詰') a.name = 'アサイー原料';
         if (a.req && a.req.q === 1 && uName(a.req.u) === '箱') a.req = { q: 1, u: idByName(M.units, 'ケース', 'u') };   // まだ「1箱」のままなら
       }
+      if (ver < 6) ['s01', 's02', 's03', 's04', 's05', 's06', 's07'].forEach(function (id) {   // 袋の備品：「6袋以上」でまとめて表示、発注目安は5袋
+        var x = itemById(id); if (!x || x.cat === 'cash') return;
+        var bag = idByName(M.units, '袋', 'u');
+        x.atLeast = 6; x.req = { q: 5, u: bag }; if (!x.unit) x.unit = bag;
+      });
       var b = itemById('f06');
       if (b && b.locs.map(lName).join(',') === '棚上,冷蔵庫内') {   // まだ登録したときの2か所のままなら
         b.locs = [idByName(M.locs, '棚上', 'l')];
@@ -1653,6 +1945,9 @@ if (!checkStorage()) { storageOK = false; $('#st-warn').hidden = false; }
 })();
 if (!lsGet(K_MASTER)) saveMaster();
 route();
+photoLoadAll().then(function () { if (screen === 'main') renderMain(); if (inp) renderInput(); }, function () {});
+if (SY.pending) queueSync(1500);
+window.addEventListener('online', function () { if (SY.pending) runSync(); });
 
 if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
   window.addEventListener('load', function () {
